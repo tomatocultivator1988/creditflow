@@ -26,15 +26,6 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
   if (url.pathname.startsWith("/api/")) return;
 
-  event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        if (response.status === 200 && response.type === "basic") {
-          const clone = response.clone();
-          caches.open(CACHE).then((cache) => cache.put(event.request, clone));
-        }
-        return response;
-      })
-      .catch(async () => (await caches.match(event.request)) || new Response("Offline", { status: 503 })),
-  );
+  // Always fetch from network, no caching
+  event.respondWith(fetch(event.request));
 });
