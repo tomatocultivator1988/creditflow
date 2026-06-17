@@ -1,0 +1,126 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  COLLECTOR
+}
+
+enum LoanStatus {
+  ACTIVE
+  OVERDUE
+  FULLY_PAID
+}
+
+enum ScheduleStatus {
+  PENDING
+  PAID
+  OVERDUE
+  PARTIAL
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String   // bcrypt hashed
+  role      Role     @default(COLLECTOR)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  payments  Payment[]
+}
+
+model LoanAccount {
+  id               String         @id @default(cuid())
+  // Customer (flat)
+  customerName     String
+  customerPhone    String
+  customerAddress  String
+  idNumber         String?
+  validIdType      String?
+  profilePicUrl    String?
+  // Loan
+  principal        Decimal        @db.Decimal(14, 2)
+  interestRate     Decimal        @db.Decimal(5, 2)
+  interestAmount   Decimal        @db.Decimal(14, 2)
+  processingFee    Decimal        @default(0) @db.Decimal(14, 2)
+  totalPayable     Decimal        @db.Decimal(14, 2)
+  termDays         Int
+  dailyInstallment Decimal        @db.Decimal(14, 2)
+  remainingBalance Decimal        @db.Decimal(14, 2)
+  status           LoanStatus     @default(ACTIVE)
+  startDate        DateTime
+  endDate          DateTime
+  nextDueDate      DateTime
+  remarks          String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  // Relations
+  payments         Payment[]
+  schedule         LoanSchedule[]
+
+  @@index([customerName])
+  @@index([status])
+  @@index([nextDueDate])
+}
+
+model LoanSchedule {
+  id            String         @id @default(cuid())
+  loanAccountId String
+  periodNumber  Int
+  dueDate       DateTime
+  amount        Decimal        @db.Decimal(14, 2)
+  status        ScheduleStatus @default(PENDING)
+  paidDate      DateTime?
+  paymentId     String?
+  paidAmount    Decimal?       @db.Decimal(14, 2)
+  loanAccount   LoanAccount    @relation(fields: [loanAccountId], references: [id])
+
+  @@index([loanAccountId])
+  @@index([dueDate])
+  @@index([status])
+  @@unique([loanAccountId, periodNumber])
+}
+
+model Payment {
+  id            String      @id @default(cuid())
+  loanAccountId String
+  customerName  String
+  amount        Decimal     @db.Decimal(14, 2)
+  paymentDate   DateTime
+  orNumber      String?
+  notes         String?
+  postedBy      String?
+  createdAt     DateTime    @default(now())
+  loanAccount   LoanAccount @relation(fields: [loanAccountId], references: [id])
+  postedByUser  User?       @relation(fields: [postedBy], references: [id])
+
+  @@index([loanAccountId])
+  @@index([paymentDate])
+}
+
+model AdminConfig {
+  id                  String   @id @default(cuid())
+  defaultInterestRate Decimal  @default(5.00) @db.Decimal(5, 2)
+  termOptions         Int[]    @default([30, 60, 90, 120, 150, 180])
+  updatedAt           DateTime @updatedAt
+}
+
+model ActivityLog {
+  id          String   @id @default(cuid())
+  accountId   String
+  action      String
+  details     String?
+  performedBy String?
+  paymentId   String?
+  createdAt   DateTime @default(now())
+
+  @@index([accountId])
+  @@index([createdAt])
+}
