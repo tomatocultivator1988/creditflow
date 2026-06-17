@@ -35,6 +35,6 @@ self.addEventListener("fetch", (event) => {
         }
         return response;
       })
-      .catch(() => caches.match(event.request)),
+      .catch(async () => (await caches.match(event.request)) || new Response("Offline", { status: 503 })),
   );
 });
