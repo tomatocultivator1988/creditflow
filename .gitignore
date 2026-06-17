@@ -51,7 +51,10 @@ public/.favicon-*
 
 # user uploads (dev only)
 public/uploads/
-ename-enum.sql
-	est-results/
-
+ename-enum.sql
+test-results/
 .vercel
+
+# test & debug
+cookies.txt
+test-login.*
