@@ -30,6 +30,7 @@ export default function LoanDetailPage() {
   const [paymentLoading, setPaymentLoading] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(true);
   const [historyOpen, setHistoryOpen] = useState(true);
+  const [previewImg, setPreviewImg] = useState<string | null>(null);
 
   // Edit form
   const [editName, setEditName] = useState("");
@@ -224,10 +225,12 @@ export default function LoanDetailPage() {
       <div className="grid gap-6 lg:grid-cols-2">
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <h3 className="mb-4 text-sm font-semibold text-slate-900">Customer Information</h3>
-          <div className="flex items-start gap-4">
+            <div className="flex items-start gap-4">
             <div className="shrink-0">
               {loan.profilePicUrl ? (
-                <img src={loan.profilePicUrl} alt="" className="size-20 rounded-xl object-cover" />
+                <button onClick={() => setPreviewImg(loan.profilePicUrl)}>
+                  <img src={loan.profilePicUrl} alt="" className="size-20 rounded-xl object-cover cursor-pointer hover:ring-2 hover:ring-red-300 transition-all" />
+                </button>
               ) : (
                 <div className="flex size-20 items-center justify-center rounded-xl bg-slate-100">
                   <Camera size={24} className="text-slate-300" />
@@ -519,6 +522,17 @@ export default function LoanDetailPage() {
         onConfirm={handleDelete}
         onCancel={() => { setConfirmDelete(false); setActionLoading(false); }}
       />
+
+      {previewImg ? (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 px-4" onClick={() => setPreviewImg(null)}>
+          <div className="relative max-w-lg w-full" onClick={(e) => e.stopPropagation()}>
+            <img src={previewImg} alt="" className="w-full rounded-2xl shadow-2xl" />
+            <button onClick={() => setPreviewImg(null)} className="absolute -top-3 -right-3 flex size-8 items-center justify-center rounded-full bg-white shadow-lg text-slate-600 hover:text-slate-900">
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

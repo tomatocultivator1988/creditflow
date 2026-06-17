@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { Eye, Plus, Search, X } from "lucide-react";
+import { Camera, Eye, Plus, Search, X } from "lucide-react";
 import { ErrorMessage, LoadingBlock } from "@/components/ui-state";
 import { PageHeader } from "@/components/page-header";
 import { Pagination } from "@/components/pagination";
@@ -24,6 +24,7 @@ export default function LoansPage() {
   const [error, setError] = useState("");
 
   const isAdmin = session?.user?.role === "ADMIN";
+  const [previewImg, setPreviewImg] = useState<string | null>(null);
 
   // New loan modal
   const [newOpen, setNewOpen] = useState(false);
@@ -157,11 +158,22 @@ export default function LoansPage() {
                   key: "customer",
                   label: "Customer",
                   render: (loan) => (
-                    <div>
-                      <Link href={`/loans/${loan.id}`} className="font-medium text-slate-900 hover:text-red-700">
-                        {loan.customerName}
-                      </Link>
-                      <p className="text-[11px] text-slate-400">{loan.customerPhone}</p>
+                    <div className="flex items-center gap-3">
+                      {loan.profilePicUrl ? (
+                        <button onClick={() => setPreviewImg(loan.profilePicUrl)} className="shrink-0">
+                          <img src={loan.profilePicUrl} alt="" className="size-9 rounded-full object-cover ring-1 ring-slate-200 cursor-pointer hover:ring-red-300 transition-all" />
+                        </button>
+                      ) : (
+                        <span className="flex size-9 items-center justify-center rounded-full bg-slate-100 shrink-0 ring-1 ring-slate-200">
+                          <Camera size={14} className="text-slate-300" />
+                        </span>
+                      )}
+                      <div className="min-w-0">
+                        <Link href={`/loans/${loan.id}`} className="font-medium text-slate-900 hover:text-red-700 truncate block">
+                          {loan.customerName}
+                        </Link>
+                        <p className="text-[11px] text-slate-400 truncate">{loan.customerPhone}</p>
+                      </div>
                     </div>
                   ),
                 },
@@ -277,6 +289,18 @@ export default function LoansPage() {
               <button type="button" onClick={() => setNewOpen(false)} className="min-h-[44px] sm:min-h-0 w-full sm:w-auto inline-flex h-10 items-center justify-center rounded-xl border border-slate-300 px-6 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 active:scale-[0.98]">Cancel</button>
               <button type="submit" form="new-loan-form" disabled={nlLoading} className="min-h-[44px] sm:min-h-0 w-full sm:w-auto inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-red-800 px-6 text-sm font-medium text-white shadow-sm hover:bg-red-700 active:scale-[0.98] disabled:bg-slate-300">{nlLoading ? "Creating..." : "Create Loan"}</button>
             </div>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Image preview */}
+      {previewImg ? (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 px-4" onClick={() => setPreviewImg(null)}>
+          <div className="relative max-w-lg w-full" onClick={(e) => e.stopPropagation()}>
+            <img src={previewImg} alt="" className="w-full rounded-2xl shadow-2xl" />
+            <button onClick={() => setPreviewImg(null)} className="absolute -top-3 -right-3 flex size-8 items-center justify-center rounded-full bg-white shadow-lg text-slate-600 hover:text-slate-900">
+              <X size={18} />
+            </button>
           </div>
         </div>
       ) : null}
