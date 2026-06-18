@@ -6,7 +6,9 @@ export type LoanAccountDto = {
   id: string;
   customerName: string;
   customerPhone: string;
+  customerEmail: string | null;
   customerAddress: string;
+  fbLink: string | null;
   idNumber: string | null;
   validIdType: string | null;
   profilePicUrl: string | null;
@@ -21,8 +23,11 @@ export type LoanAccountDto = {
   status: LoanStatusValue;
   startDate: string;
   endDate: string;
-  nextDueDate: string;
+  nextDueDate: string | null;
   remarks: string | null;
+  released: boolean;
+  releasedAt: string | null;
+  releasedBy: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -64,6 +69,30 @@ export type AdminConfigDto = {
   termOptions: number[];
 };
 
+export type CapitalTransactionDto = {
+  id: string;
+  type: string;
+  amount: string;
+  balanceBefore: string;
+  balanceAfter: string;
+  description: string | null;
+  referenceId: string | null;
+  referenceType: string | null;
+  performedBy: string | null;
+  createdAt: string;
+};
+
+export type ExpenseDto = {
+  id: string;
+  type: string;
+  amount: string;
+  description: string | null;
+  date: string;
+  customFields: Record<string, string> | null;
+  postedBy: string | null;
+  createdAt: string;
+};
+
 export type DashboardMetricsDto = {
   totalLoans: number;
   activeLoans: number;
@@ -76,6 +105,10 @@ export type DashboardMetricsDto = {
   collectionsToday: string;
   collectionsThisWeek: string;
   collectionsThisMonth: string;
+  capitalBalance: string;
+  totalExpenses: string;
+  salaryExpenses: string;
+  otherExpenses: string;
   aging: {
     current: number;
     days1to30: number;

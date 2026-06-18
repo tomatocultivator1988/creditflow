@@ -26,14 +26,17 @@ enum ScheduleStatus {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  password  String   // bcrypt hashed
-  role      Role     @default(COLLECTOR)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  payments  Payment[]
+  id                   String               @id @default(cuid())
+  name                 String
+  email                String               @unique
+  password             String               // bcrypt hashed
+  role                 Role                 @default(COLLECTOR)
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  payments             Payment[]
+  capitalTransactions  CapitalTransaction[]
+  postedExpenses       Expense[]
+  releasedLoans        LoanAccount[]       @relation("ReleasedByUser")
 }
 
 model LoanAccount {
@@ -41,7 +44,9 @@ model LoanAccount {
   // Customer (flat)
   customerName     String
   customerPhone    String
+  customerEmail    String?
   customerAddress  String
+  fbLink           String?
   idNumber         String?
   validIdType      String?
   profilePicUrl    String?
@@ -57,8 +62,12 @@ model LoanAccount {
   status           LoanStatus     @default(ACTIVE)
   startDate        DateTime
   endDate          DateTime
-  nextDueDate      DateTime
+  nextDueDate      DateTime?
   remarks          String?
+  released         Boolean        @default(false)
+  releasedAt       DateTime?
+  releasedBy       String?
+  releasedByUser   User?          @relation("ReleasedByUser", fields: [releasedBy], references: [id])
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
   // Relations
@@ -81,6 +90,7 @@ model LoanSchedule {
   paymentId     String?
   paidAmount    Decimal?       @db.Decimal(14, 2)
   loanAccount   LoanAccount    @relation(fields: [loanAccountId], references: [id])
+  payment       Payment?       @relation(fields: [paymentId], references: [id])
 
   @@index([loanAccountId])
   @@index([dueDate])
@@ -100,6 +110,7 @@ model Payment {
   createdAt     DateTime    @default(now())
   loanAccount   LoanAccount @relation(fields: [loanAccountId], references: [id])
   postedByUser  User?       @relation(fields: [postedBy], references: [id])
+  schedules     LoanSchedule[]
 
   @@index([loanAccountId])
   @@index([paymentDate])
@@ -122,5 +133,38 @@ model ActivityLog {
   createdAt   DateTime @default(now())
 
   @@index([accountId])
+  @@index([createdAt])
+}
+
+model CapitalTransaction {
+  id            String   @id @default(cuid())
+  type          String   // ADD | WITHDRAW | LOAN | COLLECTION | EXPENSE
+  amount        Decimal  @db.Decimal(14, 2)
+  balanceBefore Decimal  @db.Decimal(14, 2)
+  balanceAfter  Decimal  @db.Decimal(14, 2)
+  description   String?
+  referenceId   String?
+  referenceType String?  // LOAN | PAYMENT | EXPENSE
+  performedBy   String?
+  createdAt     DateTime @default(now())
+  performedByUser User?  @relation(fields: [performedBy], references: [id])
+
+  @@index([type])
+  @@index([createdAt])
+}
+
+model Expense {
+  id           String   @id @default(cuid())
+  type         String   // SALARY | OTHER
+  amount       Decimal  @db.Decimal(14, 2)
+  description  String?
+  date         DateTime
+  customFields Json?
+  postedBy     String?
+  createdAt    DateTime @default(now())
+  postedByUser User?    @relation(fields: [postedBy], references: [id])
+
+  @@index([type])
+  @@index([date])
   @@index([createdAt])
 }

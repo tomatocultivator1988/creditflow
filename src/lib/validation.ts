@@ -20,10 +20,18 @@ const nameString = z
   .max(120, "Name is too long")
   .regex(/^[\p{L}][\p{L}\s.'-]*$/u, "Name contains unsupported characters");
 
+export const fbLinkSchema = z
+  .string()
+  .url("Enter a valid URL")
+  .optional()
+  .or(z.literal(""));
+
 export const createLoanSchema = z.object({
   customerName: nameString,
   customerPhone: phoneString,
+  customerEmail: z.string().email("Enter a valid email").optional().or(z.literal("")),
   customerAddress: requiredString,
+  fbLink: fbLinkSchema,
   idNumber: z.string().optional(),
   validIdType: z.string().optional(),
   principal: moneyString,
@@ -41,10 +49,30 @@ export const createLoanSchema = z.object({
 export const updateLoanSchema = z.object({
   customerName: nameString,
   customerPhone: phoneString,
+  customerEmail: z.string().email("Enter a valid email").optional().or(z.literal("")),
   customerAddress: requiredString,
+  fbLink: fbLinkSchema,
   idNumber: z.string().optional(),
   validIdType: z.string().optional(),
   remarks: z.string().optional(),
+});
+
+export const createExpenseSchema = z.object({
+  type: z.enum(["SALARY", "OTHER"]),
+  amount: moneyString,
+  description: z.string().optional(),
+  date: dateOnlyString,
+  customFields: z.record(z.string(), z.any()).optional(),
+});
+
+export const addCapitalSchema = z.object({
+  amount: moneyString,
+  description: z.string().optional(),
+});
+
+export const withdrawCapitalSchema = z.object({
+  amount: moneyString,
+  description: z.string().optional(),
 });
 
 export const createPaymentSchema = z.object({
@@ -58,7 +86,8 @@ export const updateAdminConfigSchema = z.object({
   defaultInterestRate: moneyString,
   termOptions: z
     .array(z.number().int().min(1).max(365))
-    .min(1, "At least one term option required"),
+    .min(1, "At least one term option required")
+    .refine((arr) => new Set(arr).size === arr.length, "Term options must be unique"),
 });
 
 export const createUserSchema = z.object({

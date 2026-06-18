@@ -40,6 +40,8 @@ dailyInstallment = totalPayable / termDays
 
 ## TARGET PRISMA SCHEMA
 
+**(Note: The schema below reflects the CURRENT production state including Capital, Expenses, and additional fields added after initial migration.)**
+
 ```prisma
 generator client {
   provider = "prisma-client"
@@ -69,14 +71,16 @@ enum ScheduleStatus {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  name      String
-  email     String   @unique
-  password  String   // bcrypt hashed
-  role      Role     @default(COLLECTOR)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  payments  Payment[]
+  id                  String                 @id @default(cuid())
+  name                String
+  email               String                 @unique
+  password            String                 // bcrypt hashed
+  role                Role                   @default(COLLECTOR)
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+  payments            Payment[]
+  capitalTransactions CapitalTransaction[]
+  postedExpenses      Expense[]
 }
 
 model LoanAccount {
@@ -84,7 +88,9 @@ model LoanAccount {
   // Customer (flat)
   customerName     String
   customerPhone    String
+  customerEmail    String?        // Added: email for statement/customer records
   customerAddress  String
+  fbLink           String?        // Added: Facebook profile link
   idNumber         String?
   validIdType      String?
   profilePicUrl    String?
@@ -92,6 +98,7 @@ model LoanAccount {
   principal        Decimal        @db.Decimal(14, 2)
   interestRate     Decimal        @db.Decimal(5, 2)
   interestAmount   Decimal        @db.Decimal(14, 2)
+  processingFee    Decimal        @default(0) @db.Decimal(14, 2)   // Added
   totalPayable     Decimal        @db.Decimal(14, 2)
   termDays         Int
   dailyInstallment Decimal        @db.Decimal(14, 2)
@@ -131,20 +138,55 @@ model LoanSchedule {
 }
 
 model Payment {
-  id            String      @id @default(cuid())
+  id            String         @id @default(cuid())
   loanAccountId String
   customerName  String
-  amount        Decimal     @db.Decimal(14, 2)
+  amount        Decimal        @db.Decimal(14, 2)
   paymentDate   DateTime
-  orNumber      String      @unique
+  orNumber      String?        // Optional (was @unique but made nullable)
   notes         String?
   postedBy      String?
-  createdAt     DateTime    @default(now())
-  loanAccount   LoanAccount @relation(fields: [loanAccountId], references: [id])
-  postedByUser  User?       @relation(fields: [postedBy], references: [id])
+  createdAt     DateTime       @default(now())
+  loanAccount   LoanAccount    @relation(fields: [loanAccountId], references: [id])
+  postedByUser  User?          @relation(fields: [postedBy], references: [id])
 
   @@index([loanAccountId])
   @@index([paymentDate])
+}
+
+// Added: Capital tracking with automated balance
+model CapitalTransaction {
+  id            String   @id @default(cuid())
+  type          String   // ADD | WITHDRAW | LOAN | COLLECTION | EXPENSE
+  amount        Decimal  @db.Decimal(14, 2)
+  balanceBefore Decimal  @db.Decimal(14, 2)
+  balanceAfter  Decimal  @db.Decimal(14, 2)
+  description   String?
+  referenceId   String?  // loanId / paymentId / expenseId
+  referenceType String?  // LOAN | PAYMENT | EXPENSE
+  performedBy   String?
+  createdAt     DateTime @default(now())
+  performedByUser User?  @relation(fields: [performedBy], references: [id])
+
+  @@index([type])
+  @@index([createdAt])
+}
+
+// Added: Expense tracker (SALARY / OTHER with custom fields)
+model Expense {
+  id           String   @id @default(cuid())
+  type         String   // SALARY | OTHER
+  amount       Decimal  @db.Decimal(14, 2)
+  description  String?
+  date         DateTime
+  customFields Json?    // Flexible key-value for OTHER category
+  postedBy     String?
+  createdAt    DateTime @default(now())
+  postedByUser User?    @relation(fields: [postedBy], references: [id])
+
+  @@index([type])
+  @@index([date])
+  @@index([createdAt])
 }
 
 model AdminConfig {
@@ -907,12 +949,37 @@ npm run db:seed
 | `/dashboard` | Yes | Yes |
 | `/loans` (list) | Yes | Yes |
 | `/loans/[id]` (detail) | Yes | Yes |
+| `/loans/[id]/statement` | Yes | Yes |
 | `/loans/new` | Yes | **No** |
 | `/payments` (list) | Yes | Yes |
 | `/payments/new` | Yes | Yes |
+| `/capital` | Yes | **No** |
+| `/expenses` | Yes | **No** |
 | `/reports/*` | Yes | **No** |
 | `/admin/config` | Yes | **No** |
 | `/admin/users` | Yes | **No** |
+
+---
+
+## SCHEMA ADDITIONS (Post-Initial Migration)
+
+After the initial `cash_lending_init` migration, the following were added:
+
+| Migration | Changes |
+|---|---|
+| `add_processing_fee` | Added `processingFee` to LoanAccount |
+| `make_or_number_optional` | Made `orNumber` nullable, removed unique constraint |
+| `add_capital_expenses` | Added `customerEmail`, `fbLink` to LoanAccount; Added `CapitalTransaction` and `Expense` models |
+
+**CapitalTransaction types:** ADD, WITHDRAW, LOAN (auto on loan creation), COLLECTION (auto on payment), EXPENSE (auto on expense creation)
+
+**Capital auto-tracking rules:**
+- Loan created → CapitalTransaction(type: LOAN, deducts principal from balance)
+- Payment received → CapitalTransaction(type: COLLECTION, adds amount to balance)
+- Expense created → CapitalTransaction(type: EXPENSE, deducts amount from balance)
+- Admin adds cash → CapitalTransaction(type: ADD)
+- Admin withdraws → CapitalTransaction(type: WITHDRAW)
+- Loan deleted → capital transaction records are cleaned up (reversed)
 
 ---
 

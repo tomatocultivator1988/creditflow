@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { Camera, Eye, Plus, Search, X } from "lucide-react";
+import { Camera, CheckCircle2, Eye, Plus, Printer, Search, X } from "lucide-react";
 import { ErrorMessage, LoadingBlock } from "@/components/ui-state";
 import { PageHeader } from "@/components/page-header";
 import { Pagination } from "@/components/pagination";
@@ -20,6 +20,7 @@ export default function LoansPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
+  const [dueDate, setDueDate] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -33,7 +34,9 @@ export default function LoansPage() {
   const [nlLoading, setNlLoading] = useState(false);
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
+  const [customerEmail, setCustomerEmail] = useState("");
   const [customerAddress, setCustomerAddress] = useState("");
+  const [fbLink, setFbLink] = useState("");
   const [idNumber, setIdNumber] = useState("");
   const [validIdType, setValidIdType] = useState("");
   const [principal, setPrincipal] = useState("");
@@ -44,17 +47,27 @@ export default function LoansPage() {
   const [remarks, setRemarks] = useState("");
 
   useEffect(() => {
+    setLoading(true);
     const params = new URLSearchParams();
     params.set("page", String(page));
     params.set("limit", "20");
     if (search) params.set("search", search);
     if (status) params.set("status", status);
+    if (dueDate) params.set("dueBefore", dueDate);
 
     apiRequest<{ loanAccounts: LoanAccountDto[]; pagination: { page: number; totalPages: number } }>(`/api/loans?${params}`)
       .then((data) => { setLoans(data.loanAccounts); setTotalPages(data.pagination.totalPages); })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [page, search, status]);
+  }, [page, search, status, dueDate]);
+
+  useEffect(() => {
+    if (isAdmin && typeof window !== "undefined") {
+      const sp = new URLSearchParams(window.location.search);
+      if (sp.get("new") === "1") openNew();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdmin]);
 
   function handleSearch(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -68,7 +81,9 @@ export default function LoansPage() {
     setNlError("");
     setCustomerName("");
     setCustomerPhone("");
+    setCustomerEmail("");
     setCustomerAddress("");
+    setFbLink("");
     setIdNumber("");
     setValidIdType("");
     setPrincipal("");
@@ -90,7 +105,8 @@ export default function LoansPage() {
       await apiRequest("/api/loans", {
         method: "POST",
         body: JSON.stringify({
-          customerName, customerPhone, customerAddress,
+          customerName, customerPhone, customerEmail: customerEmail || undefined,
+          customerAddress, fbLink: fbLink || undefined,
           idNumber: idNumber || undefined, validIdType: validIdType || undefined,
           principal, interestRate, processingFee: processingFee || undefined,
           termDays, startDate, remarks: remarks || undefined,
@@ -116,7 +132,7 @@ export default function LoansPage() {
   const interestAmt = principalNum && rateNum ? principalNum * (rateNum / 100) : 0;
   const totalPayable = principalNum + interestAmt;
   const rawDaily = termDays > 0 ? totalPayable / termDays : 0;
-  const dailyInstallment = Math.round(rawDaily / 10) * 10;
+  const dailyInstallment = Math.floor(rawDaily * 100) / 100;
 
   if (error) return <ErrorMessage message={error} />;
 
@@ -147,11 +163,44 @@ export default function LoansPage() {
         </select>
       </div>
 
+      <div className="flex flex-wrap items-center gap-3 print:hidden">
+        <span className="text-xs font-semibold text-slate-500">Due on or before:</span>
+        <input type="date" value={dueDate} onChange={(e) => { setDueDate(e.target.value); setPage(1); }} className="h-10 rounded-xl border border-slate-300 px-3 text-sm outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100" />
+        {dueDate ? (
+          <button onClick={() => { setDueDate(""); setPage(1); }} className="inline-flex h-10 items-center rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-600 hover:bg-slate-50">Clear Filter</button>
+        ) : null}
+        <button onClick={() => window.print()} className="inline-flex h-10 items-center gap-2 rounded-xl bg-red-800 px-4 text-sm font-medium text-white shadow-sm hover:bg-red-700 active:scale-[0.98] print:hidden">
+          <Printer size={16} /> Print Sheet
+        </button>
+      </div>
+
       {loading ? (
         <LoadingBlock />
       ) : (
         <>
-          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+          {dueDate ? (
+            <div className="hidden print:block text-xs text-slate-600 mb-2">
+              <span className="font-semibold">Collection Sheet — Due on or before {dueDate}</span>
+              <span className="ml-2 text-slate-400">({loans.length} loans)</span>
+            </div>
+          ) : null}
+          {dueDate ? (
+            <div className="grid gap-4 sm:grid-cols-3 print:grid-cols-3 print:hidden">
+              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Loans Due</p>
+                <p className="mt-1 text-xl font-bold text-slate-900">{loans.length}</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Total Collectible</p>
+                <p className="mt-1 text-xl font-bold text-red-700">{formatPeso(loans.reduce((sum, l) => sum + parseFloat(l.remainingBalance), 0).toFixed(2))}</p>
+              </div>
+              <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Overdue</p>
+                <p className="mt-1 text-xl font-bold text-rose-600">{loans.filter((l) => l.status === "OVERDUE").length}</p>
+              </div>
+            </div>
+          ) : null}
+          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm print:border print:border-slate-300 print:shadow-none print:rounded-none">
             <ResponsiveTable<LoanAccountDto>
               columns={[
                 {
@@ -160,22 +209,27 @@ export default function LoansPage() {
                   render: (loan) => (
                     <div className="flex items-center gap-3">
                       {loan.profilePicUrl ? (
-                        <button onClick={() => setPreviewImg(loan.profilePicUrl)} className="shrink-0">
+                        <button onClick={() => setPreviewImg(loan.profilePicUrl)} className="shrink-0 print:hidden">
                           <img src={loan.profilePicUrl} alt="" className="size-9 rounded-full object-cover ring-1 ring-slate-200 cursor-pointer hover:ring-red-300 transition-all" />
                         </button>
                       ) : (
-                        <span className="flex size-9 items-center justify-center rounded-full bg-slate-100 shrink-0 ring-1 ring-slate-200">
+                        <span className="flex size-9 items-center justify-center rounded-full bg-slate-100 shrink-0 ring-1 ring-slate-200 print:hidden">
                           <Camera size={14} className="text-slate-300" />
                         </span>
                       )}
                       <div className="min-w-0">
-                        <Link href={`/loans/${loan.id}`} className="font-medium text-slate-900 hover:text-red-700 truncate block">
+                        <Link href={`/loans/${loan.id}`} className="font-medium text-slate-900 hover:text-red-700 truncate block print:text-black print:no-underline">
                           {loan.customerName}
                         </Link>
                         <p className="text-[11px] text-slate-400 truncate">{loan.customerPhone}</p>
                       </div>
                     </div>
                   ),
+                },
+                {
+                  key: "address",
+                  label: "Address",
+                  render: (loan) => <span className="text-xs text-slate-600">{loan.customerAddress}</span>,
                 },
                 {
                   key: "balance",
@@ -187,6 +241,14 @@ export default function LoansPage() {
                   label: "Daily",
                   hide: "sm",
                   render: (loan) => <span className="text-slate-600">{formatPeso(loan.dailyInstallment)}</span>,
+                },
+                {
+                  key: "release",
+                  label: "Release",
+                  hide: "sm",
+                  render: (loan) => loan.released
+                    ? <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-1.5 py-0.5 text-[11px] font-semibold text-emerald-700"><CheckCircle2 size={10} /> Released</span>
+                    : <span className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-1.5 py-0.5 text-[11px] font-semibold text-amber-700">Unreleased</span>,
                 },
                 {
                   key: "status",
@@ -245,6 +307,12 @@ export default function LoansPage() {
                   </div>
                   <div className="sm:col-span-2">
                     <label className="block text-sm font-medium text-slate-700">Address *<input required value={customerAddress} onChange={(e) => setCustomerAddress(e.target.value)} className="mt-1 h-10 w-full rounded-xl border border-slate-300 px-3 text-sm outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100" /></label>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700">Email<input type="email" value={customerEmail} onChange={(e) => setCustomerEmail(e.target.value)} placeholder="customer@email.com" className="mt-1 h-10 w-full rounded-xl border border-slate-300 px-3 text-sm outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100" /></label>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700">FB Link<input type="url" value={fbLink} onChange={(e) => setFbLink(e.target.value)} placeholder="https://facebook.com/username" className="mt-1 h-10 w-full rounded-xl border border-slate-300 px-3 text-sm outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100" /></label>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700">Valid ID Type<select value={validIdType} onChange={(e) => setValidIdType(e.target.value)} className="mt-1 h-10 w-full rounded-xl border border-slate-300 px-3 text-sm outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100"><option value="">Select...</option><option value="National ID">National ID</option><option value="Driver&apos;s License">Driver&apos;s License</option><option value="Passport">Passport</option><option value="UMID">UMID</option><option value="SSS ID">SSS ID</option><option value="Postal ID">Postal ID</option><option value="Voter&apos;s ID">Voter&apos;s ID</option></select></label>

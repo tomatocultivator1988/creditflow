@@ -1,9 +1,10 @@
 "use client";
 
 import { FormEvent, useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Camera, ChevronDown, ChevronUp, Pencil, Trash2, Upload, X, XCircle } from "lucide-react";
+import { Camera, CheckCircle2, ChevronDown, ChevronUp, Clock, FileText, Pencil, Trash2, Upload, X, XCircle } from "lucide-react";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { ErrorMessage, LoadingBlock } from "@/components/ui-state";
 import { PageHeader } from "@/components/page-header";
@@ -35,7 +36,9 @@ export default function LoanDetailPage() {
   // Edit form
   const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
+  const [editEmail, setEditEmail] = useState("");
   const [editAddress, setEditAddress] = useState("");
+  const [editFbLink, setEditFbLink] = useState("");
   const [editIdNumber, setEditIdNumber] = useState("");
   const [editIdType, setEditIdType] = useState("");
   const [editRemarks, setEditRemarks] = useState("");
@@ -69,7 +72,9 @@ export default function LoanDetailPage() {
     if (!loan) return;
     setEditName(loan.customerName);
     setEditPhone(loan.customerPhone);
+    setEditEmail(loan.customerEmail || "");
     setEditAddress(loan.customerAddress);
+    setEditFbLink(loan.fbLink || "");
     setEditIdNumber(loan.idNumber || "");
     setEditIdType(loan.validIdType || "");
     setEditRemarks(loan.remarks || "");
@@ -85,7 +90,9 @@ export default function LoanDetailPage() {
         body: JSON.stringify({
           customerName: editName,
           customerPhone: editPhone,
+          customerEmail: editEmail || undefined,
           customerAddress: editAddress,
+          fbLink: editFbLink || undefined,
           idNumber: editIdNumber || undefined,
           validIdType: editIdType || undefined,
           remarks: editRemarks || undefined,
@@ -150,6 +157,19 @@ export default function LoanDetailPage() {
     }
   }
 
+  // Release
+  async function handleRelease() {
+    setActionLoading(true);
+    try {
+      const result = await apiRequest<{ loanAccount: LoanAccountDto }>(`/api/loans/${id}/release`, { method: "POST" });
+      setLoan(result.loanAccount);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setActionLoading(false);
+    }
+  }
+
   // Close
   async function handleClose() {
     setActionLoading(true);
@@ -186,6 +206,12 @@ export default function LoanDetailPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <PageHeader title="Loan Detail" description={loan.customerName} />
         <div className="flex flex-wrap gap-2">
+          <Link
+            href={`/loans/${id}/statement`}
+            className="inline-flex min-h-[44px] sm:min-h-0 h-10 items-center gap-2 rounded-xl border border-slate-300 px-4 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 active:scale-[0.98]"
+          >
+            <FileText size={14} /> Statement
+          </Link>
           {isAdmin ? (
             <>
               <button
@@ -236,7 +262,16 @@ export default function LoanDetailPage() {
                   <Camera size={24} className="text-slate-300" />
                 </div>
               )}
-              {isAdmin ? (
+          {!loan.released ? (
+            <button
+              onClick={handleRelease}
+              disabled={actionLoading}
+              className="inline-flex min-h-[44px] sm:min-h-0 h-10 items-center gap-2 rounded-xl bg-emerald-700 px-4 text-sm font-medium text-white shadow-sm hover:bg-emerald-600 active:scale-[0.98] disabled:opacity-50"
+            >
+              <CheckCircle2 size={14} /> Mark Released
+            </button>
+          ) : null}
+          {isAdmin ? (
                 <label className="mt-2 flex cursor-pointer items-center justify-center gap-1 rounded-lg bg-slate-100 px-2 py-1 text-xs text-slate-600 hover:bg-slate-200">
                   <Upload size={12} />
                   {uploading ? "..." : "Photo"}
@@ -247,10 +282,23 @@ export default function LoanDetailPage() {
             <div className="min-w-0 flex-1 space-y-1.5 text-sm">
               <p className="font-medium text-slate-900">{loan.customerName}</p>
               <p className="text-slate-500">{loan.customerPhone}</p>
+              {loan.customerEmail ? <p className="text-slate-500">{loan.customerEmail}</p> : null}
               <p className="text-slate-500">{loan.customerAddress}</p>
+              {loan.fbLink ? (
+                <p className="text-slate-500">
+                  <a href={loan.fbLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Facebook Profile</a>
+                </p>
+              ) : null}
               {loan.idNumber ? <p className="text-slate-500">ID: {loan.idNumber} {loan.validIdType ? `(${loan.validIdType})` : ""}</p> : null}
               <p className="text-slate-500">
                 Status: <StatusBadge status={loan.status} nextDueDate={loan.nextDueDate} /> | Next Due: {loan.nextDueDate}
+              </p>
+              <p className="text-slate-500">
+                Release: {loan.released
+                  ? <span className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700 border border-emerald-200"><CheckCircle2 size={11} /> Released</span>
+                  : <span className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-2 py-0.5 text-xs font-semibold text-amber-700 border border-amber-200"><Clock size={11} /> Unreleased</span>
+                }
+                {loan.releasedAt ? <span className="text-xs text-slate-400 ml-1">· {new Date(loan.releasedAt).toLocaleDateString()}</span> : null}
               </p>
             </div>
           </div>
@@ -276,7 +324,7 @@ export default function LoanDetailPage() {
               <span className="font-medium text-slate-900">{formatPeso(loan.totalPayable)}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500">Per Period</span>
+              <span className="text-slate-500">Daily Installment</span>
               <span className="font-medium text-slate-900">{formatPeso(loan.dailyInstallment)}</span>
             </div>
             <div className="flex justify-between">
@@ -434,8 +482,16 @@ export default function LoanDetailPage() {
                 <input required value={editPhone} onChange={(e) => setEditPhone(e.target.value)} className="mt-1.5 h-10 w-full rounded-xl border border-slate-300 px-3 text-sm outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100" />
               </div>
               <div>
+                <label className="block text-sm font-medium text-slate-700">Email</label>
+                <input type="email" value={editEmail} onChange={(e) => setEditEmail(e.target.value)} className="mt-1.5 h-10 w-full rounded-xl border border-slate-300 px-3 text-sm outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100" />
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-slate-700">Address *</label>
                 <input required value={editAddress} onChange={(e) => setEditAddress(e.target.value)} className="mt-1.5 h-10 w-full rounded-xl border border-slate-300 px-3 text-sm outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700">Facebook Profile Link</label>
+                <input type="url" value={editFbLink} onChange={(e) => setEditFbLink(e.target.value)} placeholder="https://facebook.com/username" className="mt-1.5 h-10 w-full rounded-xl border border-slate-300 px-3 text-sm outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100" />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>

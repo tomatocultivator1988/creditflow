@@ -7,12 +7,17 @@ type LoanScheduleShape = Prisma.LoanScheduleGetPayload<Record<string, never>>;
 type PaymentShape = Prisma.PaymentGetPayload<Record<string, never>>;
 type UserShape = Prisma.UserGetPayload<Record<string, never>>;
 
+type CapitalTransactionShape = Prisma.CapitalTransactionGetPayload<Record<string, never>>;
+type ExpenseShape = Prisma.ExpenseGetPayload<Record<string, never>>;
+
 export function serializeLoanAccount(account: LoanAccountShape) {
   return {
     id: account.id,
     customerName: account.customerName,
     customerPhone: account.customerPhone,
+    customerEmail: account.customerEmail ?? null,
     customerAddress: account.customerAddress,
+    fbLink: account.fbLink ?? null,
     idNumber: account.idNumber ?? null,
     validIdType: account.validIdType ?? null,
     profilePicUrl: account.profilePicUrl ?? null,
@@ -27,8 +32,11 @@ export function serializeLoanAccount(account: LoanAccountShape) {
     status: account.status,
     startDate: dateToManilaDateOnly(account.startDate),
     endDate: dateToManilaDateOnly(account.endDate),
-    nextDueDate: dateToManilaDateOnly(account.nextDueDate),
+    nextDueDate: account.nextDueDate ? dateToManilaDateOnly(account.nextDueDate) : null,
     remarks: account.remarks ?? null,
+    released: account.released,
+    releasedAt: account.releasedAt?.toISOString() ?? null,
+    releasedBy: account.releasedBy ?? null,
     createdAt: account.createdAt.toISOString(),
     updatedAt: account.updatedAt.toISOString(),
   };
@@ -70,6 +78,34 @@ export function serializeUser(user: UserShape) {
     email: user.email,
     role: user.role,
     createdAt: user.createdAt.toISOString(),
+  };
+}
+
+export function serializeCapitalTransaction(tx: CapitalTransactionShape) {
+  return {
+    id: tx.id,
+    type: tx.type,
+    amount: decimalToString(tx.amount),
+    balanceBefore: decimalToString(tx.balanceBefore),
+    balanceAfter: decimalToString(tx.balanceAfter),
+    description: tx.description,
+    referenceId: tx.referenceId,
+    referenceType: tx.referenceType,
+    performedBy: tx.performedBy,
+    createdAt: tx.createdAt.toISOString(),
+  };
+}
+
+export function serializeExpense(expense: ExpenseShape) {
+  return {
+    id: expense.id,
+    type: expense.type,
+    amount: decimalToString(expense.amount),
+    description: expense.description,
+    date: dateToManilaDateOnly(expense.date),
+    customFields: expense.customFields,
+    postedBy: expense.postedBy,
+    createdAt: expense.createdAt.toISOString(),
   };
 }
 

@@ -19,6 +19,7 @@ export async function GET(request: Request) {
     const limit = Math.min(100, Math.max(1, Number(searchParams.get("limit")) || 20));
     const search = searchParams.get("search") || "";
     const status = searchParams.get("status") || "";
+    const dueBefore = searchParams.get("dueBefore") || "";
 
     const where: Record<string, unknown> = {};
     if (search) {
@@ -28,6 +29,11 @@ export async function GET(request: Request) {
     }
     if (status && ["ACTIVE", "OVERDUE", "FULLY_PAID"].includes(status)) {
       where.status = status;
+    }
+    if (dueBefore) {
+      const dueDate = new Date(dueBefore + "T23:59:59.999+08:00");
+      where.nextDueDate = { lte: dueDate };
+      where.status = { not: "FULLY_PAID" };
     }
 
     const [accounts, total] = await Promise.all([
@@ -77,11 +83,13 @@ export async function POST(request: Request) {
       termDays,
     );
 
+    const finalTotalPayable = totalPayable.plus(processingFee);
+
     const schedule = generateDailySchedule(
       startDate,
       termDays,
       dailyInstallment,
-      totalPayable,
+      finalTotalPayable,
     );
 
     const endDate = new Date(startDate);
@@ -93,17 +101,19 @@ export async function POST(request: Request) {
         data: {
           customerName: body.customerName,
           customerPhone: body.customerPhone,
+          customerEmail: body.customerEmail || null,
           customerAddress: body.customerAddress,
+          fbLink: body.fbLink || null,
           idNumber: body.idNumber || null,
           validIdType: body.validIdType || null,
           principal: decimalToString(principal),
           interestRate: decimalToString(interestRate),
           interestAmount: decimalToString(interestAmount),
           processingFee: decimalToString(processingFee),
-          totalPayable: decimalToString(totalPayable),
+          totalPayable: decimalToString(finalTotalPayable),
           termDays,
           dailyInstallment: decimalToString(dailyInstallment),
-          remainingBalance: decimalToString(totalPayable),
+          remainingBalance: decimalToString(finalTotalPayable),
           status: "ACTIVE",
           startDate,
           endDate,
@@ -119,6 +129,31 @@ export async function POST(request: Request) {
           },
         },
       });
+      const lastCapitalTx = await tx.$queryRawUnsafe<Array<{ balanceAfter: string }>>(
+        `SELECT "balanceAfter" FROM "CapitalTransaction" ORDER BY "createdAt" DESC LIMIT 1 FOR UPDATE`,
+      );
+      const currentBalance = lastCapitalTx.length > 0
+        ? new Decimal(lastCapitalTx[0].balanceAfter)
+        : new Decimal(0);
+      const newBalance = currentBalance.minus(principal);
+
+      if (currentBalance.gt(0) && newBalance.lt(0)) {
+        throw new Error("INSUFFICIENT_CAPITAL");
+      }
+
+      await tx.capitalTransaction.create({
+        data: {
+          type: "LOAN",
+          amount: decimalToString(principal),
+          balanceBefore: decimalToString(currentBalance),
+          balanceAfter: decimalToString(newBalance),
+          description: `Loan disbursement - ${body.customerName}`,
+          referenceId: created.id,
+          referenceType: "LOAN",
+          performedBy: session.user?.id || null,
+        },
+      });
+
       return created;
     });
 
@@ -127,6 +162,9 @@ export async function POST(request: Request) {
       { status: 201 },
     );
   } catch (error) {
+    if (error instanceof Error && error.message === "INSUFFICIENT_CAPITAL") {
+      return NextResponse.json({ error: "Insufficient capital balance to create this loan" }, { status: 400 });
+    }
     return handleApiError(error);
   }
 }

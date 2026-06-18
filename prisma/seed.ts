@@ -11,10 +11,6 @@ const connectionString = process.env.DATABASE_URL!;
 const adapter = new PrismaPg({ connectionString });
 const prisma = new PrismaClient({ adapter });
 
-function roundToNearest10(value: Decimal): Decimal {
-  return new Decimal(Math.round(value.toNumber() / 10) * 10);
-}
-
 function computeLoan(
   principal: Decimal,
   interestRate: Decimal,
@@ -24,7 +20,7 @@ function computeLoan(
     .times(interestRate.div(100))
     .toDecimalPlaces(2);
   const totalPayable = principal.plus(interestAmount);
-  const dailyInstallment = roundToNearest10(totalPayable.div(termDays));
+  const dailyInstallment = totalPayable.div(termDays).toDecimalPlaces(2, Decimal.ROUND_FLOOR);
   return { interestAmount, totalPayable, dailyInstallment };
 }
 
@@ -64,6 +60,8 @@ async function main() {
   console.log("Seeding database...");
 
   // Clean existing data
+  await prisma.capitalTransaction.deleteMany();
+  await prisma.expense.deleteMany();
   await prisma.payment.deleteMany();
   await prisma.loanSchedule.deleteMany();
   await prisma.loanAccount.deleteMany();
@@ -105,6 +103,70 @@ async function main() {
   });
   console.log(`  ✓ Created admin config`);
 
+  // Seed initial capital
+  const initialCapital = await prisma.capitalTransaction.create({
+    data: {
+      type: "ADD",
+      amount: "100000.00",
+      balanceBefore: "0.00",
+      balanceAfter: "100000.00",
+      description: "Initial capital investment",
+      performedBy: admin.id,
+    },
+  });
+  console.log(`  ✓ Initial capital: ₱100,000`);
+
+  // Seed some expenses
+  await prisma.expense.create({
+    data: {
+      type: "SALARY",
+      amount: "15000.00",
+      description: "Collector salary - June 2026",
+      date: new Date("2026-06-15T00:00:00.000+08:00"),
+      postedBy: admin.id,
+    },
+  });
+  await prisma.expense.create({
+    data: {
+      type: "OTHER",
+      amount: "2500.00",
+      description: "Office supplies",
+      date: new Date("2026-06-10T00:00:00.000+08:00"),
+      customFields: { category: "Supplies", vendor: "National Bookstore" },
+      postedBy: admin.id,
+    },
+  });
+  console.log(`  ✓ Seeded 2 expenses`);
+
+  // Create expense capital transactions (deduct from capital)
+  let expCapBalance = new Decimal("100000.00");
+  await prisma.capitalTransaction.create({
+    data: {
+      type: "EXPENSE",
+      amount: "15000.00",
+      balanceBefore: expCapBalance.toFixed(2),
+      balanceAfter: expCapBalance.minus("15000.00").toFixed(2),
+      description: "Expense: SALARY - Collector salary - June 2026",
+      referenceId: "seed-salary",
+      referenceType: "EXPENSE",
+      performedBy: admin.id,
+    },
+  });
+  expCapBalance = expCapBalance.minus("15000.00");
+  await prisma.capitalTransaction.create({
+    data: {
+      type: "EXPENSE",
+      amount: "2500.00",
+      balanceBefore: expCapBalance.toFixed(2),
+      balanceAfter: expCapBalance.minus("2500.00").toFixed(2),
+      description: "Expense: OTHER - Office supplies",
+      referenceId: "seed-other",
+      referenceType: "EXPENSE",
+      performedBy: admin.id,
+    },
+  });
+  console.log(`  ✓ Created expense capital transactions`);
+
   // Sample loans
   const startDate = new Date("2026-06-01T00:00:00.000+08:00");
 
@@ -112,7 +174,9 @@ async function main() {
   const juan = await createLoan({
     customerName: "Juan Dela Cruz",
     customerPhone: "09171234567",
+    customerEmail: "juan.delacruz@gmail.com",
     customerAddress: "123 Rizal St., Manila",
+    fbLink: "https://facebook.com/juan.delacruz",
     idNumber: "ID-12345",
     validIdType: "National ID",
     principal: new Decimal("10000"),
@@ -122,14 +186,16 @@ async function main() {
     startDate,
     status: "ACTIVE",
     payPeriods: 5,
+    userId: admin.id,
   });
-
   // Loan 2: OVERDUE — Maria Santos, 60 days
   const mariaStart = new Date("2026-05-01T00:00:00.000+08:00");
   const maria = await createLoan({
     customerName: "Maria Santos",
     customerPhone: "09189876543",
+    customerEmail: "maria.santos@yahoo.com",
     customerAddress: "456 Mabini St., Quezon City",
+    fbLink: "https://facebook.com/maria.santos",
     idNumber: "ID-67890",
     validIdType: "Driver's License",
     principal: new Decimal("15000"),
@@ -139,6 +205,7 @@ async function main() {
     startDate: mariaStart,
     status: "OVERDUE",
     payPeriods: 10,
+    userId: admin.id,
   });
 
   // Loan 3: ACTIVE — Pedro Reyes, 90 days
@@ -146,7 +213,9 @@ async function main() {
   const pedro = await createLoan({
     customerName: "Pedro Reyes",
     customerPhone: "09221234567",
+    customerEmail: "pedro.reyes@gmail.com",
     customerAddress: "789 Aguinaldo St., Makati",
+    fbLink: "https://facebook.com/pedro.reyes",
     idNumber: "ID-11111",
     validIdType: "Passport",
     principal: new Decimal("20000"),
@@ -156,14 +225,15 @@ async function main() {
     startDate: pedroStart,
     status: "ACTIVE",
     payPeriods: 20,
+    userId: admin.id,
   });
-
-  // Loan 4: FULLY_PAID — Ana Lopez, 30 days
   const anaStart = new Date("2026-04-01T00:00:00.000+08:00");
   const ana = await createLoan({
     customerName: "Ana Lopez",
     customerPhone: "09331234567",
+    customerEmail: "ana.lopez@gmail.com",
     customerAddress: "321 Bonifacio St., Pasig",
+    fbLink: "https://facebook.com/ana.lopez",
     idNumber: "ID-22222",
     validIdType: "UMID",
     principal: new Decimal("8000"),
@@ -174,14 +244,15 @@ async function main() {
     status: "FULLY_PAID",
     payPeriods: 30,
     fullyPaid: true,
+    userId: admin.id,
   });
-
-  // Loan 5: OVERDUE — Carlos Cruz, 30 days
   const carlosStart = new Date("2026-04-15T00:00:00.000+08:00");
   const carlos = await createLoan({
     customerName: "Carlos Cruz",
     customerPhone: "09451234567",
+    customerEmail: "carlos.cruz@gmail.com",
     customerAddress: "654 Luna St., Taguig",
+    fbLink: "https://facebook.com/carlos.cruz",
     idNumber: "ID-33333",
     validIdType: "SSS ID",
     principal: new Decimal("12000"),
@@ -191,9 +262,8 @@ async function main() {
     startDate: carlosStart,
     status: "OVERDUE",
     payPeriods: 5,
+    userId: admin.id,
   });
-
-  // Post some payments
   // For Juan (ACTIVE) — pay 5 periods
   const juanSchedule = await prisma.loanSchedule.findMany({
     where: { loanAccountId: juan.id },
@@ -242,7 +312,9 @@ async function main() {
 async function createLoan(params: {
   customerName: string;
   customerPhone: string;
+  customerEmail?: string;
   customerAddress: string;
+  fbLink?: string;
   idNumber: string;
   validIdType: string;
   principal: Decimal;
@@ -253,6 +325,7 @@ async function createLoan(params: {
   status: string;
   payPeriods: number;
   fullyPaid?: boolean;
+  userId: string;
 }) {
   const { interestAmount, totalPayable, dailyInstallment } = computeLoan(
     params.principal,
@@ -274,7 +347,9 @@ async function createLoan(params: {
     data: {
       customerName: params.customerName,
       customerPhone: params.customerPhone,
+      customerEmail: params.customerEmail || null,
       customerAddress: params.customerAddress,
+      fbLink: params.fbLink || null,
       idNumber: params.idNumber,
       validIdType: params.validIdType,
       principal: params.principal.toFixed(2),
@@ -297,6 +372,23 @@ async function createLoan(params: {
           status: "PENDING" as any,
         })),
       },
+    },
+  });
+
+  const lastCapTx = await prisma.capitalTransaction.findFirst({
+    orderBy: { createdAt: "desc" },
+  });
+  const currentCap = lastCapTx ? new Decimal(lastCapTx.balanceAfter) : new Decimal(0);
+  await prisma.capitalTransaction.create({
+    data: {
+      type: "LOAN",
+      amount: params.principal.toFixed(2),
+      balanceBefore: currentCap.toFixed(2),
+      balanceAfter: currentCap.minus(params.principal).toFixed(2),
+      description: `Loan disbursement - ${params.customerName}`,
+      referenceId: account.id,
+      referenceType: "LOAN",
+      performedBy: params.userId,
     },
   });
 
@@ -359,6 +451,23 @@ async function postPayment(
       data: {
         remainingBalance: remaining.toFixed(2),
         ...(status ? { status: status as any } : {}),
+      },
+    });
+
+    const lastCapTx = await tx.capitalTransaction.findFirst({
+      orderBy: { createdAt: "desc" },
+    });
+    const currentCap = lastCapTx ? new Decimal(lastCapTx.balanceAfter) : new Decimal(0);
+    await tx.capitalTransaction.create({
+      data: {
+        type: "COLLECTION",
+        amount: amount.toFixed(2),
+        balanceBefore: currentCap.toFixed(2),
+        balanceAfter: currentCap.plus(amount).toFixed(2),
+        description: `Payment collection - ${customerName}`,
+        referenceId: payment.id,
+        referenceType: "PAYMENT",
+        performedBy: userId,
       },
     });
   });

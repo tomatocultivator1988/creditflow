@@ -14,6 +14,10 @@ type RouteContext = { params: Promise<{ id: string }> };
 
 export async function GET(_request: Request, context: RouteContext) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const { id } = await context.params;
     const account = await prisma.loanAccount.findUnique({ where: { id } });
 
@@ -58,7 +62,9 @@ export async function PUT(request: Request, context: RouteContext) {
       data: {
         customerName: body.customerName,
         customerPhone: body.customerPhone,
+        customerEmail: body.customerEmail || null,
         customerAddress: body.customerAddress,
+        fbLink: body.fbLink || null,
         idNumber: body.idNumber || null,
         validIdType: body.validIdType || null,
         remarks: body.remarks ?? null,
@@ -81,6 +87,22 @@ export async function DELETE(request: Request, context: RouteContext) {
     const { id } = await context.params;
 
     await prisma.$transaction(async (tx) => {
+      const paymentIdList = (await tx.payment.findMany({
+        where: { loanAccountId: id },
+        select: { id: true },
+      })).map((p) => p.id);
+
+      await tx.capitalTransaction.deleteMany({
+        where: {
+          OR: [
+            { referenceId: id, referenceType: "LOAN" },
+            ...(paymentIdList.length > 0
+              ? [{ referenceId: { in: paymentIdList }, referenceType: "PAYMENT" }]
+              : []),
+          ],
+        },
+      });
+
       await tx.activityLog.deleteMany({ where: { accountId: id } });
       await tx.payment.deleteMany({ where: { loanAccountId: id } });
       await tx.loanSchedule.deleteMany({ where: { loanAccountId: id } });

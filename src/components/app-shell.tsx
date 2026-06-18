@@ -14,6 +14,8 @@ const sharedLinks = [
 ];
 
 const adminLinks = [
+  { href: "/capital", label: "Capital", icon: "Banknote" },
+  { href: "/expenses", label: "Expenses", icon: "Receipt" },
   { href: "/reports", label: "Reports", icon: "FileText" },
   { href: "/admin/config", label: "Settings", icon: "Settings" },
   { href: "/admin/users", label: "Users", icon: "Users" },
@@ -35,7 +37,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="mx-auto flex max-w-7xl items-center px-4 py-2.5 sm:px-6">
           <Link href="/dashboard" className="flex items-center gap-2 shrink-0">
             <span className="flex size-8 items-center justify-center rounded-lg bg-white/15 p-1">
-              <img src="/logo.png" alt="" className="h-full w-full object-contain" />
+              <img src="/logo.png" alt="JBV Credit" className="h-full w-full object-contain" />
             </span>
             <span>
               <span className="block text-sm font-bold tracking-wide">JBV Credit</span>

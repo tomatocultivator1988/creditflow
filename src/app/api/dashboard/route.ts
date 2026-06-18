@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import Decimal from "decimal.js";
+import { auth } from "@/lib/auth";
 import { handleApiError } from "@/lib/api";
 import { decimalToString } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
@@ -9,6 +10,10 @@ export const runtime = "nodejs";
 
 export async function GET() {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const now = new Date();
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const todayEnd = new Date(todayStart.getTime() + 86400000);
@@ -17,7 +22,7 @@ export async function GET() {
     const monthStart = startOfMonth(now);
     const monthEnd = endOfMonth(now);
 
-    const [statusCounts, loanAggsResult, paymentAggsResult, agingResult] =
+    const [statusCounts, loanAggsResult, paymentAggsResult, agingResult, capitalResult, expenseResult] =
       await Promise.all([
         prisma.loanAccount.groupBy({ by: ["status"], _count: true }),
 
@@ -83,6 +88,16 @@ export async function GET() {
             GROUP BY sub."loanAccountId"
           ) aged`,
         ),
+
+        prisma.capitalTransaction.findFirst({
+          orderBy: { createdAt: "desc" },
+          select: { balanceAfter: true },
+        }),
+
+        prisma.expense.groupBy({
+          by: ["type"],
+          _sum: { amount: true },
+        }),
       ]);
 
     const countMap: Record<string, number> = {};
@@ -107,6 +122,17 @@ export async function GET() {
       days61to90: 0,
       days90plus: 0,
     };
+
+    const capitalBalance = capitalResult?.balanceAfter
+      ? decimalToString(capitalResult.balanceAfter)
+      : "0.00";
+
+    let salaryTotal = new Decimal(0);
+    let otherTotal = new Decimal(0);
+    for (const row of expenseResult) {
+      if (row.type === "SALARY") salaryTotal = row._sum.amount ?? new Decimal(0);
+      if (row.type === "OTHER") otherTotal = row._sum.amount ?? new Decimal(0);
+    }
 
     return NextResponse.json({
       metrics: {
@@ -134,6 +160,10 @@ export async function GET() {
         collectionsThisMonth: decimalToString(
           new Decimal(paymentAggs.month),
         ),
+        capitalBalance,
+        totalExpenses: decimalToString(salaryTotal.plus(otherTotal)),
+        salaryExpenses: decimalToString(salaryTotal),
+        otherExpenses: decimalToString(otherTotal),
         aging: {
           current: countMap.ACTIVE ?? 0,
           days1to30: agingData.days1to30,

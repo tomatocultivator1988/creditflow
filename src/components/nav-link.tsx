@@ -9,6 +9,8 @@ import {
   FileText,
   Settings,
   Users,
+  Banknote,
+  Receipt,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -19,6 +21,8 @@ const iconMap: Record<string, LucideIcon> = {
   FileText,
   Settings,
   Users,
+  Banknote,
+  Receipt,
 };
 
 export function NavLink({

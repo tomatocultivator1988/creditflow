@@ -68,6 +68,8 @@ export async function recalculateBalance(
   };
   if (nextDue) {
     updateData.nextDueDate = nextDue;
+  } else {
+    updateData.nextDueDate = null;
   }
 
   await tx.loanAccount.update({

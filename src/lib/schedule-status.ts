@@ -11,7 +11,7 @@ export async function updateOverdueSchedule(
   await prisma.loanSchedule.updateMany({
     where: {
       loanAccountId,
-      status: { in: ["PENDING"] },
+      status: { in: ["PENDING", "PARTIAL"] },
       dueDate: { lt: todayDate },
     },
     data: { status: "OVERDUE" },

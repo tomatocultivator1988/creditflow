@@ -14,6 +14,10 @@ export const runtime = "nodejs";
 
 export async function GET(request: Request) {
   try {
+    const session = await auth();
+    if (!session?.user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     const { searchParams } = new URL(request.url);
     const page = Math.max(1, Number(searchParams.get("page")) || 1);
     const limit = Math.min(100, Math.max(1, Number(searchParams.get("limit")) || 20));
@@ -144,11 +148,38 @@ export async function POST(request: Request) {
           ),
         );
 
+        // Compute actual applied amount (cap capital increase to what was applied)
+        const initialAmount = new Decimal(totalAmount);
+        const appliedAmount = initialAmount.minus(remaining);
+        const actualCollection = appliedAmount.gt(0) ? appliedAmount : new Decimal(0);
+
         // Recalculate balance
         await recalculateBalance(
           tx as unknown as Parameters<typeof recalculateBalance>[0],
           account.id,
         );
+
+        // Create capital transaction for collection (locked read)
+        const lockedRows = await tx.$queryRawUnsafe<Array<{ balanceAfter: string }>>(
+          `SELECT "balanceAfter" FROM "CapitalTransaction" ORDER BY "createdAt" DESC LIMIT 1 FOR UPDATE`,
+        );
+        const currentBalance = lockedRows.length > 0
+          ? new Decimal(lockedRows[0].balanceAfter)
+          : new Decimal(0);
+        const newBalance = currentBalance.plus(actualCollection);
+
+        await tx.capitalTransaction.create({
+          data: {
+            type: "COLLECTION",
+            amount: decimalToString(actualCollection),
+            balanceBefore: decimalToString(currentBalance),
+            balanceAfter: decimalToString(newBalance),
+            description: `Payment collection - ${account.customerName}`,
+            referenceId: createdPayment.id,
+            referenceType: "PAYMENT",
+            performedBy: session.user?.id || null,
+          },
+        });
 
         return createdPayment;
       }),

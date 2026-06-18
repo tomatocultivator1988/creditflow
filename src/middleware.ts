@@ -6,17 +6,13 @@ const publicPaths = ["/login", "/api/auth", "/_next", "/favicon.ico", "/manifest
 export function middleware(req: NextRequest) {
   const path = req.nextUrl.pathname;
 
-  if (publicPaths.some((p) => path.startsWith(p))) {
-    return NextResponse.next();
-  }
-
-  if (path.match(/\.(png|ico|svg|webmanifest)$/)) {
+  if (publicPaths.some((p) => path.startsWith(p)) || path.match(/\.(png|ico|svg|webmanifest)$/)) {
     return NextResponse.next();
   }
 
   const hasCookie =
-    !!req.cookies.get("__Secure-authjs.session-token")?.value ||
-    !!req.cookies.get("authjs.session-token")?.value;
+    req.cookies.get("__Secure-authjs.session-token")?.value ||
+    req.cookies.get("authjs.session-token")?.value;
 
   if (!hasCookie) {
     return NextResponse.redirect(new URL("/login", req.url));
