@@ -2,7 +2,6 @@
 
 import { useEffect, useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { getSession } from "next-auth/react";
 import { Plus, Receipt, X } from "lucide-react";
 import { ErrorMessage, LoadingBlock } from "@/components/ui-state";
 import { PageHeader } from "@/components/page-header";
@@ -42,13 +41,7 @@ export default function ExpensesPage() {
   };
 
   useEffect(() => {
-    getSession().then((sess) => {
-      if (!sess || (sess.user as any)?.role !== "ADMIN") {
-        router.push("/dashboard");
-        return;
-      }
-      fetchData();
-    });
+    fetchData();
   }, [page, typeFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function openModal() {

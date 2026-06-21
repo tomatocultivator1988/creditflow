@@ -2,7 +2,6 @@
 
 import { useEffect, useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { getSession } from "next-auth/react";
 import { ArrowUp, ArrowDown, Plus, Minus, Landmark, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { ErrorMessage, LoadingBlock } from "@/components/ui-state";
@@ -63,13 +62,7 @@ export default function CapitalPage() {
   };
 
   useEffect(() => {
-    getSession().then((sess) => {
-      if (!sess || (sess.user as any)?.role !== "ADMIN") {
-        router.push("/dashboard");
-        return;
-      }
-      fetchData();
-    });
+    fetchData();
   }, [page, typeFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function openAddModal() { setAddOpen(true); setAddAmount(""); setAddDesc(""); setAddError(""); }

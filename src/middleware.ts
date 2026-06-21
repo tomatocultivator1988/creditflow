@@ -1,30 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-export const runtime = "nodejs";
-
 const publicPaths = ["/login", "/api/auth", "/_next", "/manifest.webmanifest", "/sw.js"];
-const adminOnly = ["/capital", "/expenses", "/reports", "/admin"];
-
-function getTokenCookie(req: NextRequest): string | undefined {
-  return (
-    req.cookies.get("__Secure-authjs.session-token")?.value ||
-    req.cookies.get("authjs.session-token")?.value
-  );
-}
-
-function decodeRole(token: string): string | null {
-  try {
-    const parts = token.split(".");
-    if (parts.length !== 3) return null;
-    const payload = JSON.parse(
-      Buffer.from(parts[1], "base64url").toString("utf-8"),
-    );
-    return payload.role ?? null;
-  } catch {
-    return null;
-  }
-}
 
 export function middleware(req: NextRequest) {
   const path = req.nextUrl.pathname;
@@ -37,16 +14,12 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  const token = getTokenCookie(req);
+  const hasCookie =
+    req.cookies.get("__Secure-authjs.session-token")?.value ||
+    req.cookies.get("authjs.session-token")?.value;
 
-  if (!token) {
+  if (!hasCookie) {
     return NextResponse.redirect(new URL("/login", req.url));
-  }
-
-  const role = decodeRole(token);
-
-  if (adminOnly.some((p) => path.startsWith(p)) && role !== "ADMIN") {
-    return NextResponse.redirect(new URL("/dashboard", req.url));
   }
 
   return NextResponse.next();
