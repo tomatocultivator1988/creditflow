@@ -74,6 +74,10 @@ button:disabled {
 }
 
 @media print {
+  * {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
   @page {
     size: landscape;
     margin: 12mm;

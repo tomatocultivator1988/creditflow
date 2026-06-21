@@ -79,7 +79,7 @@ export async function POST(request: Request) {
     const termDays = body.termDays;
     const startDate = parseDateOnly(body.startDate, "startDate");
     const processingFee = body.processingFee
-      ? parsePositiveMoney(body.processingFee, "processingFee")
+      ? parseMoney(body.processingFee, "processingFee")
       : new Decimal(0);
 
     const { interestAmount, totalPayable, dailyInstallment } = computeLoan(

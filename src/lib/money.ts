@@ -18,8 +18,8 @@ export function parseMoney(value: unknown, field = "amount"): Decimal {
 export function parsePositiveMoney(value: unknown, field = "amount"): Decimal {
   const amount = parseMoney(value, field);
 
-  if (amount.lt(0)) {
-    throw new Error(`${field} must not be negative`);
+  if (amount.lte(0)) {
+    throw new Error(`${field} must be greater than zero`);
   }
 
   return amount;

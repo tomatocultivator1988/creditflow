@@ -52,7 +52,7 @@ export function ResponsiveTable<T extends { id: string }>({
   return (
     <>
       {/* Desktop table */}
-      <div className="hidden sm:block overflow-x-auto">
+      <div className="hidden sm:block print:block overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="border-b border-slate-200 bg-slate-50 text-left">
             <tr>
@@ -92,7 +92,7 @@ export function ResponsiveTable<T extends { id: string }>({
       </div>
 
       {/* Mobile cards */}
-      <div className="sm:hidden space-y-3">
+      <div className="sm:hidden print:hidden space-y-3">
         {data.length === 0 ? (
           <div className="rounded-xl bg-white px-4 py-12 text-center text-sm text-slate-400">
             {emptyMessage}

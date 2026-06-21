@@ -185,7 +185,7 @@ export default function LoansPage() {
             </div>
           ) : null}
           {dueDate ? (
-            <div className="grid gap-4 sm:grid-cols-3 print:grid-cols-3 print:hidden">
+            <div className="grid gap-4 sm:grid-cols-3 print:grid-cols-3">
               <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
                 <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Loans Due</p>
                 <p className="mt-1 text-xl font-bold text-slate-900">{loans.length}</p>

@@ -156,7 +156,7 @@ export default function StatementPage({ params }: { params: Promise<{ id: string
           {data.payments.length > 0 ? (
             <>
               {/* Mobile: Cards */}
-              <div className="block sm:hidden space-y-2">
+              <div className="block sm:hidden print:hidden space-y-2">
                 {data.payments.map((p) => (
                   <div key={p.id} className="rounded-lg border border-slate-200 bg-white p-3 text-xs space-y-1.5">
                     <div className="flex justify-between">
@@ -177,7 +177,7 @@ export default function StatementPage({ params }: { params: Promise<{ id: string
                 ))}
               </div>
               {/* Desktop: Table */}
-              <div className="hidden sm:block">
+              <div className="hidden sm:block print:block">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
@@ -208,7 +208,7 @@ export default function StatementPage({ params }: { params: Promise<{ id: string
           <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">Installment Schedule ({data.schedule.length} periods)</h2>
 
           {/* Mobile: Cards */}
-          <div className="block sm:hidden space-y-1.5">
+          <div className="block sm:hidden print:hidden space-y-1.5">
             {data.schedule.map((s) => (
               <div key={s.id} className={`rounded-lg border p-2.5 text-xs space-y-1 ${scheduleCardBorder[s.status] || ""}`}>
                 <div className="flex justify-between">
@@ -254,7 +254,7 @@ export default function StatementPage({ params }: { params: Promise<{ id: string
           </div>
 
           {/* Desktop: Table */}
-          <div className="hidden sm:block">
+          <div className="hidden sm:block print:block">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
@@ -304,7 +304,7 @@ export default function StatementPage({ params }: { params: Promise<{ id: string
             </h2>
 
             {/* Mobile: Cards */}
-            <div className="block sm:hidden space-y-2">
+            <div className="block sm:hidden print:hidden space-y-2">
               {dueToday.map((s) => (
                 <div key={s.id} className="rounded-lg border border-red-100 bg-white p-3 text-xs space-y-1.5">
                   <div className="flex justify-between">
@@ -338,7 +338,7 @@ export default function StatementPage({ params }: { params: Promise<{ id: string
             </div>
 
             {/* Desktop: Table */}
-            <div className="hidden sm:block">
+            <div className="hidden sm:block print:block">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-red-100 text-left text-xs text-slate-500">

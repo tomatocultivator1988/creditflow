@@ -122,12 +122,16 @@ export async function POST(request: Request) {
           remaining = remaining.minus(applied);
         }
 
+        // Compute actual applied amount before creating payment
+        const appliedAmount = totalAmount.minus(remaining);
+        const actualCollection = appliedAmount.gt(0) ? appliedAmount : new Decimal(0);
+
         // Create payment
         const createdPayment = await tx.payment.create({
           data: {
             loanAccountId: body.loanAccountId,
             customerName: account.customerName,
-            amount: decimalToString(totalAmount),
+            amount: decimalToString(actualCollection),
             paymentDate,
             notes: body.notes || null,
             postedBy: session.user?.id || null,
@@ -148,11 +152,6 @@ export async function POST(request: Request) {
             }),
           ),
         );
-
-        // Compute actual applied amount (cap capital increase to what was applied)
-        const initialAmount = new Decimal(totalAmount);
-        const appliedAmount = initialAmount.minus(remaining);
-        const actualCollection = appliedAmount.gt(0) ? appliedAmount : new Decimal(0);
 
         // Recalculate balance
         const { balance: newRemainingBalance } = await recalculateBalance(
@@ -190,7 +189,7 @@ export async function POST(request: Request) {
                 customerName: account.customerName,
                 paymentId: createdPayment.id,
                 paymentDate: body.paymentDate,
-                amount: decimalToString(totalAmount),
+                amount: decimalToString(actualCollection),
                 principal: decimalToString(account.principal),
                 interestRate: decimalToString(account.interestRate),
                 termDays: account.termDays,
