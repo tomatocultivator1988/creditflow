@@ -66,10 +66,12 @@ export async function POST(request: Request) {
       const amount = parsePositiveMoney(parsed.amount, "amount");
 
       const created = await prisma.$transaction(async (prismaTx) => {
-        const lastTx = await prismaTx.capitalTransaction.findFirst({
-          orderBy: { createdAt: "desc" },
-        });
-        const currentBalance = lastTx ? new Decimal(lastTx.balanceAfter) : new Decimal(0);
+        const lockedRows = await prismaTx.$queryRawUnsafe<Array<{ balanceAfter: string }>>(
+          `SELECT "balanceAfter" FROM "CapitalTransaction" ORDER BY "createdAt" DESC LIMIT 1 FOR UPDATE`,
+        );
+        const currentBalance = lockedRows.length > 0
+          ? new Decimal(lockedRows[0].balanceAfter)
+          : new Decimal(0);
         const newBalance = currentBalance.plus(amount);
 
         return prismaTx.capitalTransaction.create({
@@ -95,10 +97,12 @@ export async function POST(request: Request) {
       const amount = parsePositiveMoney(parsed.amount, "amount");
 
       const created = await prisma.$transaction(async (prismaTx) => {
-        const lastTx = await prismaTx.capitalTransaction.findFirst({
-          orderBy: { createdAt: "desc" },
-        });
-        const currentBalance = lastTx ? new Decimal(lastTx.balanceAfter) : new Decimal(0);
+        const lockedRows = await prismaTx.$queryRawUnsafe<Array<{ balanceAfter: string }>>(
+          `SELECT "balanceAfter" FROM "CapitalTransaction" ORDER BY "createdAt" DESC LIMIT 1 FOR UPDATE`,
+        );
+        const currentBalance = lockedRows.length > 0
+          ? new Decimal(lockedRows[0].balanceAfter)
+          : new Decimal(0);
 
         if (amount.gt(currentBalance)) {
           throw new Error("INSUFFICIENT_BALANCE");
