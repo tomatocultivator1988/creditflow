@@ -9,6 +9,7 @@ import { prisma } from "@/lib/prisma";
 import { recalculateBalance } from "@/lib/balance";
 import { serializePayment } from "@/lib/serializers";
 import { createPaymentSchema } from "@/lib/validation";
+import { sendPaymentReceipt } from "@/lib/email";
 
 export const runtime = "nodejs";
 
@@ -50,7 +51,7 @@ export async function POST(request: Request) {
     const body = createPaymentSchema.parse(await readJson(request));
     const paymentDate = parseDateOnly(body.paymentDate, "paymentDate");
 
-    const payment = await withRetry(() =>
+    const result = await withRetry(() =>
       prisma.$transaction(async (tx) => {
         const account = await tx.loanAccount.findUnique({
           where: { id: body.loanAccountId },
@@ -154,7 +155,7 @@ export async function POST(request: Request) {
         const actualCollection = appliedAmount.gt(0) ? appliedAmount : new Decimal(0);
 
         // Recalculate balance
-        await recalculateBalance(
+        const { balance: newRemainingBalance } = await recalculateBalance(
           tx as unknown as Parameters<typeof recalculateBalance>[0],
           account.id,
         );
@@ -181,12 +182,37 @@ export async function POST(request: Request) {
           },
         });
 
-        return createdPayment;
+        return {
+          payment: createdPayment,
+          emailData: account.customerEmail
+            ? {
+                customerEmail: account.customerEmail,
+                customerName: account.customerName,
+                paymentId: createdPayment.id,
+                paymentDate: body.paymentDate,
+                amount: decimalToString(totalAmount),
+                principal: decimalToString(account.principal),
+                interestRate: decimalToString(account.interestRate),
+                termDays: account.termDays,
+                dailyInstallment: decimalToString(account.dailyInstallment),
+                remainingBalance: decimalToString(newRemainingBalance),
+                notes: body.notes || null,
+                collector: (session.user as any)?.name || null,
+              }
+            : null,
+        };
       }),
     );
 
+    // Fire-and-forget email receipt (never blocks payment)
+    if (result.emailData) {
+      sendPaymentReceipt(result.emailData).catch((err) =>
+        console.error("Receipt email failed:", err),
+      );
+    }
+
     return NextResponse.json(
-      { payment: serializePayment(payment) },
+      { payment: serializePayment(result.payment) },
       { status: 201 },
     );
   } catch (error) {

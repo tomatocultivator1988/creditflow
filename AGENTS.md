@@ -31,7 +31,7 @@ dailyInstallment = totalPayable / termDays
 2. **No penalties** — no penalty computation, no penalty records, no late fees
 3. **No discounts** — no advance payment discount
 4. **Cash only** — no GCASH, no BANK payment methods
-5. **No email sending** — keep `src/lib/email.ts` module but NEVER call it from account creation or payment posting
+5. **Email receipt** — call `sendPaymentReceipt` from `src/lib/email.ts` after successful payment posting (fire-and-forget, never blocks payment). Only sends if customer has `customerEmail` on file. Requires `EMAIL_USER` and `EMAIL_PASS` env vars (Gmail app password).
 6. **Customer data is flat** on LoanAccount — no separate Customer table
 7. **Schedule is daily** — one row per day of term
 8. **Payment types** — NOT tracked (no REGULAR/PARTIAL/ADVANCE/FULL). Just record amount.

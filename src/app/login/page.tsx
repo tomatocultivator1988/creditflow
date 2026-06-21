@@ -42,11 +42,11 @@ export default function LoginPage() {
         <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
           <div className="mb-6 text-center">
             <span className="mx-auto mb-3 flex size-16 items-center justify-center">
-              <img
-                src="/logo.png"
-                alt="JBV Credit Collection Services"
-                className="h-14 w-auto object-contain"
-              />
+<img
+  src="/logo.svg"
+  alt="JBV Credit Collection Services"
+  className="h-14 w-auto object-contain"
+/>
             </span>
             <h1 className="text-lg font-bold font-heading text-slate-900">
               JBV Credit
