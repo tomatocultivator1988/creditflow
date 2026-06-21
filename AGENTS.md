@@ -992,3 +992,32 @@ After the initial `cash_lending_init` migration, the following were added:
 | CREATE | ~12 | auth.ts, loan-compute.ts, supabase-storage.ts, middleware.ts, [...nextauth] route, next-auth.d.ts, admin/users page, loans pages, payments/new, report pages |
 | MODIFY | ~6 | app-shell, status-badge, nav-link, logout-button, layout, next.config |
 | KEEP AS-IS | ~8 | prisma.ts, dates.ts, money.ts, errors.ts, api.ts, field-validation.ts, email.ts, client-api.ts |
+
+---
+
+## PLAYWRIGHT / TESTING
+
+- **Project version:** Playwright 1.61.0 (devDependency)
+- **Test command:** `npx playwright test`
+- **Installed browsers:** `%LOCALAPPDATA%\ms-playwright\chromium-1223`
+
+### IMPORTANT — Avoid repeated browser downloads
+
+The Playwright MCP tools may use a different Playwright version (1.57.0) that looks for `chromium-1200`. A junction already exists mapping it to the installed browser:
+
+```
+chromium-1200 -> chromium-1223
+```
+
+If a future agent or MCP tool tries to download a browser again, **DO NOT download**. Instead:
+
+1. Check what browser version the MCP expects (check error message)
+2. Create a junction: `New-Item -ItemType Junction -Path "C:\Users\JOPZ SSD PC1\AppData\Local\ms-playwright\chromium-XXXX" -Target "C:\Users\JOPZ SSD PC1\AppData\Local\ms-playwright\chromium-1223" -Force`
+
+### For QA / testing — prefer these over browser-based tools
+
+| Method | Use case | No browser needed? |
+|---|---|---|
+| `playwright_playwright_get` / `_post` / `_put` / `_delete` | API endpoint testing | ✅ Yes |
+| `npx playwright test` via bash | Full E2E tests | ❌ Needs installed browser |
+| `Invoke-WebRequest` (PowerShell) | Quick smoke tests | ✅ Yes |
