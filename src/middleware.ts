@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+export const runtime = "nodejs";
+
 const publicPaths = ["/login", "/api/auth", "/_next", "/manifest.webmanifest", "/sw.js"];
 const adminOnly = ["/capital", "/expenses", "/reports", "/admin"];
 
@@ -15,10 +17,9 @@ function decodeRole(token: string): string | null {
   try {
     const parts = token.split(".");
     if (parts.length !== 3) return null;
-    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=");
-    const json = atob(padded);
-    const payload = JSON.parse(json);
+    const payload = JSON.parse(
+      Buffer.from(parts[1], "base64url").toString("utf-8"),
+    );
     return payload.role ?? null;
   } catch {
     return null;

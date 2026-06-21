@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState, FormEvent } from "react";
-import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { getSession } from "next-auth/react";
 import { ArrowUp, ArrowDown, Plus, Minus, Landmark, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { ErrorMessage, LoadingBlock } from "@/components/ui-state";
@@ -29,7 +29,6 @@ const typeIcons: Record<string, LucideIcon> = {
 };
 
 export default function CapitalPage() {
-  const { data: session, status } = useSession();
   const router = useRouter();
 
   const [balance, setBalance] = useState("0.00");
@@ -64,13 +63,14 @@ export default function CapitalPage() {
   };
 
   useEffect(() => {
-    if (status === "loading") return;
-    if (session?.user?.role !== "ADMIN") {
-      router.push("/dashboard");
-      return;
-    }
-    fetchData();
-  }, [page, typeFilter, status, session]); // eslint-disable-line react-hooks/exhaustive-deps
+    getSession().then((sess) => {
+      if (!sess || (sess.user as any)?.role !== "ADMIN") {
+        router.push("/dashboard");
+        return;
+      }
+      fetchData();
+    });
+  }, [page, typeFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function openAddModal() { setAddOpen(true); setAddAmount(""); setAddDesc(""); setAddError(""); }
   function openWithdrawModal() { setWithdrawOpen(true); setWithdrawAmount(""); setWithdrawDesc(""); setWithdrawError(""); }

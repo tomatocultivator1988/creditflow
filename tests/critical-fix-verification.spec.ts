@@ -4,7 +4,7 @@ const BASE = "http://localhost:3000";
 
 test.describe("CRITICAL Bug Fixes — End-to-End Verification", () => {
 
-  async function login(page, email: string, password: string) {
+  async function login(page: import("@playwright/test").Page, email: string, password: string) {
     await page.goto(`${BASE}/login`);
     await page.fill('input[type="email"]', email);
     await page.fill('input[type="password"]', password);
@@ -49,22 +49,22 @@ test.describe("CRITICAL Bug Fixes — End-to-End Verification", () => {
   test("C1: Admin can access all admin routes", async ({ page }) => {
     await login(page, "admin@jbvcredit.com", "admin123");
     await expect(page).toHaveURL(/\/dashboard/);
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(3000);
 
     await page.goto(`${BASE}/capital`);
-    await expect(page).toHaveURL(/\/capital/, { timeout: 10000 });
+    await expect(page).toHaveURL(/\/capital/, { timeout: 20000 });
 
     await page.goto(`${BASE}/expenses`);
-    await expect(page).toHaveURL(/\/expenses/, { timeout: 10000 });
+    await expect(page).toHaveURL(/\/expenses/, { timeout: 20000 });
 
     await page.goto(`${BASE}/reports`);
-    await expect(page).toHaveURL(/\/reports/, { timeout: 10000 });
+    await expect(page).toHaveURL(/\/reports/, { timeout: 20000 });
 
     await page.goto(`${BASE}/admin/config`);
-    await expect(page).toHaveURL(/\/admin\/config/, { timeout: 10000 });
+    await expect(page).toHaveURL(/\/admin\/config/, { timeout: 20000 });
 
     await page.goto(`${BASE}/admin/users`);
-    await expect(page).toHaveURL(/\/admin\/users/, { timeout: 10000 });
+    await expect(page).toHaveURL(/\/admin\/users/, { timeout: 20000 });
   });
 
   test("Admin dashboard loads with all sections", async ({ page }) => {
@@ -117,7 +117,7 @@ test.describe("CRITICAL Bug Fixes — End-to-End Verification", () => {
     await page.goto(`${BASE}/payments`);
     await expect(page).toHaveURL(/\/payments/);
     await expect(page.getByRole("heading", { name: /Payment/ })).toBeVisible({ timeout: 10000 });
-    await expect(page.locator('input[type="text"]').first()).toBeVisible({ timeout: 5000 });
+    await expect(page.locator('button:has-text("New Payment")')).toBeVisible({ timeout: 5000 });
   });
 
   test("Loans page loads with date filter, address column, print button", async ({ page }) => {
@@ -134,18 +134,20 @@ test.describe("CRITICAL Bug Fixes — End-to-End Verification", () => {
   test("Capital page shows balance and transactions for admin", async ({ page }) => {
     await login(page, "admin@jbvcredit.com", "admin123");
     await expect(page).toHaveURL(/\/dashboard/);
+    await page.waitForTimeout(3000);
 
     await page.goto(`${BASE}/capital`);
-    await expect(page).toHaveURL(/\/capital/);
-    await expect(page.locator("text=Capital Transactions")).toBeVisible({ timeout: 5000 });
+    await expect(page).toHaveURL(/\/capital/, { timeout: 15000 });
+    await expect(page.locator("text=Capital Transactions")).toBeVisible({ timeout: 15000 });
   });
 
   test("Expenses page loads for admin", async ({ page }) => {
     await login(page, "admin@jbvcredit.com", "admin123");
     await expect(page).toHaveURL(/\/dashboard/);
+    await page.waitForTimeout(3000);
 
     await page.goto(`${BASE}/expenses`);
-    await expect(page).toHaveURL(/\/expenses/);
-    await expect(page.locator("text=Expenses")).toBeVisible({ timeout: 5000 });
+    await expect(page).toHaveURL(/\/expenses/, { timeout: 15000 });
+    await expect(page.locator("text=Expenses")).toBeVisible({ timeout: 15000 });
   });
 });

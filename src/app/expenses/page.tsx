@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState, FormEvent } from "react";
-import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { getSession } from "next-auth/react";
 import { Plus, Receipt, X } from "lucide-react";
 import { ErrorMessage, LoadingBlock } from "@/components/ui-state";
 import { PageHeader } from "@/components/page-header";
@@ -12,7 +12,6 @@ import { formatPeso } from "@/lib/money";
 import type { ExpenseDto } from "@/types/api";
 
 export default function ExpensesPage() {
-  const { data: session, status } = useSession();
   const router = useRouter();
 
   const [expenses, setExpenses] = useState<ExpenseDto[]>([]);
@@ -43,13 +42,14 @@ export default function ExpensesPage() {
   };
 
   useEffect(() => {
-    if (status === "loading") return;
-    if (session?.user?.role !== "ADMIN") {
-      router.push("/dashboard");
-      return;
-    }
-    fetchData();
-  }, [page, typeFilter, status, session]); // eslint-disable-line react-hooks/exhaustive-deps
+    getSession().then((sess) => {
+      if (!sess || (sess.user as any)?.role !== "ADMIN") {
+        router.push("/dashboard");
+        return;
+      }
+      fetchData();
+    });
+  }, [page, typeFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function openModal() {
     setModalOpen(true);
