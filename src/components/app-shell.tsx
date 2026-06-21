@@ -1,11 +1,12 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { usePathname, useRouter } from "next/navigation";
+import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
 import { NavLink } from "@/components/nav-link";
 import { LogoutButton } from "@/components/logout-button";
 import { InstallPrompt } from "@/components/install-prompt";
+import { LogOut } from "lucide-react";
 
 const sharedLinks = [
   { href: "/dashboard", label: "Dashboard", icon: "LayoutDashboard" },
@@ -23,11 +24,19 @@ const adminLinks = [
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { data: session } = useSession();
   const isLoginPage = pathname === "/login";
   const isAdmin = session?.user?.role === "ADMIN";
 
   const navLinks = isAdmin ? [...sharedLinks, ...adminLinks] : sharedLinks;
+  const mobileAdminLinks = adminLinks.filter((l) => l.href !== "/admin/config" && l.href !== "/admin/users");
+  const mobileLinks = isAdmin ? [...sharedLinks, ...mobileAdminLinks] : sharedLinks;
+
+  async function handleFloatingLogout() {
+    await signOut({ redirect: false });
+    router.push("/login");
+  }
 
   if (isLoginPage) return <>{children}</>;
 
@@ -63,7 +72,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around border-t border-slate-200 bg-white sm:hidden print:hidden"
         style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
       >
-        {navLinks.map((link) => (
+        {mobileLinks.map((link) => (
           <NavLink
             key={link.href}
             href={link.href}
@@ -72,8 +81,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             mobile
           />
         ))}
-        <LogoutButton />
       </nav>
+
+      <button
+        onClick={handleFloatingLogout}
+        className="fixed bottom-20 right-4 z-50 flex size-11 items-center justify-center rounded-full bg-red-700 text-white shadow-lg transition-all duration-150 active:scale-90 sm:hidden print:hidden"
+        style={{ marginBottom: "env(safe-area-inset-bottom, 0px)" }}
+        title="Sign out"
+      >
+        <LogOut size={20} />
+      </button>
     </div>
   );
 }
