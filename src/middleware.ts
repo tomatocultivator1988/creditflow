@@ -15,9 +15,10 @@ function decodeRole(token: string): string | null {
   try {
     const parts = token.split(".");
     if (parts.length !== 3) return null;
-    const payload = JSON.parse(
-      Buffer.from(parts[1], "base64url").toString("utf-8"),
-    );
+    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), "=");
+    const json = atob(padded);
+    const payload = JSON.parse(json);
     return payload.role ?? null;
   } catch {
     return null;
