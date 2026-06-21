@@ -15,6 +15,7 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const now = new Date();
+    const manilaToday = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(new Date());
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const todayEnd = new Date(todayStart.getTime() + 86400000);
     const weekStart = startOfWeek(now, { weekStartsOn: 1 });
@@ -22,7 +23,7 @@ export async function GET() {
     const monthStart = startOfMonth(now);
     const monthEnd = endOfMonth(now);
 
-    const [statusCounts, loanAggsResult, paymentAggsResult, agingResult, capitalResult, expenseResult] =
+    const [statusCounts, loanAggsResult, paymentAggsResult, agingResult, capitalResult, expenseResult, dueTodayResult] =
       await Promise.all([
         prisma.loanAccount.groupBy({ by: ["status"], _count: true }),
 
@@ -98,6 +99,43 @@ export async function GET() {
           by: ["type"],
           _sum: { amount: true },
         }),
+
+        prisma.$queryRawUnsafe<
+          Array<{
+            loanAccountId: string;
+            customerName: string;
+            customerPhone: string;
+            customerAddress: string;
+            dailyInstallment: string;
+            remainingBalance: string;
+            periodNumber: number;
+            amount: string;
+            dueDate: Date;
+            status: string;
+            paidAmount: string | null;
+          }>
+        >(
+          `SELECT
+            ls."loanAccountId",
+            la."customerName",
+            la."customerPhone",
+            la."customerAddress",
+            la."dailyInstallment"::text,
+            la."remainingBalance"::text,
+            ls."periodNumber",
+            ls."amount"::text,
+            ls."dueDate",
+            ls."status",
+            ls."paidAmount"::text
+          FROM "LoanSchedule" ls
+          JOIN "LoanAccount" la ON la.id = ls."loanAccountId"
+          WHERE ls."dueDate" >= $1::date
+            AND ls."dueDate" < $1::date + 1
+            AND ls."status" IN ('PENDING', 'PARTIAL', 'OVERDUE')
+            AND la."status" != 'FULLY_PAID'
+          ORDER BY la."customerName"`,
+          manilaToday,
+        ),
       ]);
 
     const countMap: Record<string, number> = {};
@@ -133,6 +171,25 @@ export async function GET() {
       if (row.type === "SALARY") salaryTotal = row._sum.amount ?? new Decimal(0);
       if (row.type === "OTHER") otherTotal = row._sum.amount ?? new Decimal(0);
     }
+
+    const dueToday = dueTodayResult.map((r) => ({
+      loanAccountId: r.loanAccountId,
+      customerName: r.customerName,
+      customerPhone: r.customerPhone,
+      customerAddress: r.customerAddress,
+      dailyInstallment: decimalToString(new Decimal(r.dailyInstallment)),
+      remainingBalance: decimalToString(new Decimal(r.remainingBalance)),
+      periodNumber: r.periodNumber,
+      amount: decimalToString(new Decimal(r.amount)),
+      dueDate: new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(r.dueDate),
+      status: r.status as "PENDING" | "PAID" | "OVERDUE" | "PARTIAL",
+      paidAmount: r.paidAmount ? decimalToString(new Decimal(r.paidAmount)) : null,
+    }));
+    const uniqueAccounts = new Set(dueToday.map((r) => r.loanAccountId));
+    const dueTodayTotal = dueToday.reduce(
+      (sum, r) => sum.plus(new Decimal(r.amount)),
+      new Decimal(0),
+    );
 
     return NextResponse.json({
       metrics: {
@@ -171,6 +228,9 @@ export async function GET() {
           days61to90: agingData.days61to90,
           days90plus: agingData.days90plus,
         },
+        dueToday,
+        dueTodayTotal: decimalToString(dueTodayTotal),
+        dueTodayCount: uniqueAccounts.size,
       },
     });
   } catch (error) {

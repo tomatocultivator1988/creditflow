@@ -93,6 +93,20 @@ export type ExpenseDto = {
   createdAt: string;
 };
 
+export type DueTodayItemDto = {
+  loanAccountId: string;
+  customerName: string;
+  customerPhone: string;
+  customerAddress: string;
+  dailyInstallment: string;
+  remainingBalance: string;
+  periodNumber: number;
+  amount: string;
+  dueDate: string;
+  status: ScheduleStatusValue;
+  paidAmount: string | null;
+};
+
 export type DashboardMetricsDto = {
   totalLoans: number;
   activeLoans: number;
@@ -116,4 +130,7 @@ export type DashboardMetricsDto = {
     days61to90: number;
     days90plus: number;
   };
+  dueToday: DueTodayItemDto[];
+  dueTodayTotal: string;
+  dueTodayCount: number;
 };
