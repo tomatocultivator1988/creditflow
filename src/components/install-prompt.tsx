@@ -81,7 +81,7 @@ export function InstallPrompt() {
 
   if (iOSDevice) {
     return (
-      <div className="fixed bottom-0 left-0 right-0 z-50 sm:bottom-4 sm:left-auto sm:right-4 sm:w-80">
+      <div className="fixed bottom-0 left-0 right-0 z-50 sm:bottom-4 sm:left-auto sm:right-4 sm:w-80 print:hidden">
         <div className="mx-2 mb-2 rounded-lg border border-red-200 bg-white p-4 shadow-lg sm:mx-0 sm:mb-0">
           <div className="flex items-start gap-3">
             <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-red-800 text-white">
@@ -103,7 +103,7 @@ export function InstallPrompt() {
   }
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50">
+    <div className="fixed bottom-0 left-0 right-0 z-50 print:hidden">
       <div className="mx-2 mb-2 rounded-lg border border-slate-200 bg-white p-3 shadow-lg sm:mx-auto sm:max-w-md">
         <div className="flex items-center gap-3">
           <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-red-800 text-white">

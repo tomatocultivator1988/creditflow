@@ -4,7 +4,8 @@ const requiredString = z.string().trim().min(1, "Required field");
 const moneyString = z
   .string()
   .trim()
-  .regex(/^\d+(\.\d{1,2})?$/, "Enter a valid amount");
+  .regex(/^\d+(\.\d{1,2})?$/, "Enter a valid amount")
+  .refine((v) => v.replace(".", "").length <= 14, "Amount exceeds maximum precision (14 digits total)");
 const dateOnlyString = z
   .string()
   .trim()

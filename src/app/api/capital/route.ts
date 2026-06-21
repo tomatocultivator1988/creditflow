@@ -23,7 +23,7 @@ export async function GET(request: Request) {
     const type = searchParams.get("type") || "";
 
     const where: Record<string, unknown> = {};
-    if (type && ["ADD", "WITHDRAW", "LOAN", "COLLECTION", "EXPENSE"].includes(type)) {
+    if (type && ["ADD", "WITHDRAW", "LOAN", "COLLECTION", "EXPENSE", "WRITE_OFF"].includes(type)) {
       where.type = type;
     }
 

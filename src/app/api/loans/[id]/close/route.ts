@@ -29,7 +29,7 @@ export async function POST(_request: Request, context: RouteContext) {
 
       await tx.loanSchedule.updateMany({
         where: { loanAccountId: id, status: { not: "PAID" } },
-        data: { status: "PAID", paidDate: new Date(), paidAmount: undefined },
+        data: { status: "PAID", paidDate: new Date(), paidAmount: null },
       });
 
       const lastCapital = await tx.$queryRawUnsafe<Array<{ balanceAfter: string }>>(

@@ -11,7 +11,7 @@ export function Pagination({ page, totalPages, onPageChange, className }: Pagina
   if (totalPages <= 1) return null;
 
   return (
-    <div className={`flex items-center justify-between border-t border-slate-200 px-4 py-3 ${className ?? ""}`}>
+    <div className={`print:hidden flex items-center justify-between border-t border-slate-200 px-4 py-3 ${className ?? ""}`}>
       <div className="text-sm text-slate-500">
         Page {page} of {totalPages}
       </div>

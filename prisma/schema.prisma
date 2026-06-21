@@ -138,7 +138,7 @@ model ActivityLog {
 
 model CapitalTransaction {
   id            String   @id @default(cuid())
-  type          String   // ADD | WITHDRAW | LOAN | COLLECTION | EXPENSE
+  type          String   // ADD | WITHDRAW | LOAN | COLLECTION | EXPENSE | WRITE_OFF
   amount        Decimal  @db.Decimal(14, 2)
   balanceBefore Decimal  @db.Decimal(14, 2)
   balanceAfter  Decimal  @db.Decimal(14, 2)

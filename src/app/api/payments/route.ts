@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { handleApiError, readJson, withRetry } from "@/lib/api";
 import { parseDateOnly } from "@/lib/dates";
-import { NotFoundError } from "@/lib/errors";
+import { NotFoundError, ValidationError } from "@/lib/errors";
 import { decimalToString } from "@/lib/money";
 import { prisma } from "@/lib/prisma";
 import { recalculateBalance } from "@/lib/balance";
@@ -66,6 +66,12 @@ export async function POST(request: Request) {
           throw new NotFoundError("Cannot post payment to a fully paid account");
         }
 
+        // Lock schedule rows to prevent concurrent FIFO overlap
+        await tx.$queryRawUnsafe(
+          `SELECT 1 FROM "LoanSchedule" WHERE "loanAccountId" = $1 FOR UPDATE`,
+          account.id,
+        );
+
         const totalAmount = new Decimal(body.amount);
 
         // Mark overdue schedules
@@ -125,6 +131,10 @@ export async function POST(request: Request) {
         // Compute actual applied amount before creating payment
         const appliedAmount = totalAmount.minus(remaining);
         const actualCollection = appliedAmount.gt(0) ? appliedAmount : new Decimal(0);
+
+        if (actualCollection.lte(0)) {
+          throw new ValidationError("No remaining balance to apply payment to");
+        }
 
         // Create payment
         const createdPayment = await tx.payment.create({

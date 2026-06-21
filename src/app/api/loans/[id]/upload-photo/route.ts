@@ -29,6 +29,14 @@ export async function POST(request: Request, context: RouteContext) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
     }
 
+    const ALLOWED = ["image/jpeg", "image/png", "image/webp"];
+    if (!ALLOWED.includes(file.type)) {
+      return NextResponse.json({ error: "Only JPEG, PNG, and WebP images are allowed" }, { status: 400 });
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      return NextResponse.json({ error: "File size must be under 5MB" }, { status: 400 });
+    }
+
     const fileExt = file.name.split(".").pop();
     const fileName = `${id}-${Date.now()}.${fileExt}`;
     const buffer = Buffer.from(await file.arrayBuffer());
