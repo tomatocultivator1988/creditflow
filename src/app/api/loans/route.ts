@@ -142,7 +142,7 @@ export async function POST(request: Request) {
         : new Decimal(0);
       const newBalance = currentBalance.minus(principal);
 
-      if (currentBalance.gt(0) && newBalance.lt(0)) {
+      if (newBalance.lt(0)) {
         throw new Error("INSUFFICIENT_CAPITAL");
       }
 

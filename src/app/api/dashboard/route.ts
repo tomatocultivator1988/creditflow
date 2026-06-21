@@ -14,14 +14,13 @@ export async function GET() {
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const now = new Date();
     const manilaToday = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila" }).format(new Date());
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const todayStart = new Date(manilaToday + "T00:00:00.000+08:00");
     const todayEnd = new Date(todayStart.getTime() + 86400000);
-    const weekStart = startOfWeek(now, { weekStartsOn: 1 });
-    const weekEnd = endOfWeek(now, { weekStartsOn: 1 });
-    const monthStart = startOfMonth(now);
-    const monthEnd = endOfMonth(now);
+    const weekStart = startOfWeek(todayStart, { weekStartsOn: 1 });
+    const weekEnd = endOfWeek(todayStart, { weekStartsOn: 1 });
+    const monthStart = startOfMonth(todayStart);
+    const monthEnd = endOfMonth(todayStart);
 
     const [statusCounts, loanAggsResult, paymentAggsResult, agingResult, capitalResult, expenseResult, dueTodayResult] =
       await Promise.all([
@@ -77,17 +76,18 @@ export async function GET() {
             COUNT(*) FILTER (WHERE days_overdue BETWEEN 61 AND 90)::int AS "days61to90",
             COUNT(*) FILTER (WHERE days_overdue > 90)::int AS "days90plus"
           FROM (
-            SELECT CURRENT_DATE - MIN(sub.due_date)::date AS days_overdue
+            SELECT $1::date - MIN(sub.due_date)::date AS days_overdue
             FROM (
               SELECT s."loanAccountId", s."dueDate" as due_date
               FROM "LoanSchedule" s
               JOIN "LoanAccount" a ON a.id = s."loanAccountId"
               WHERE a."status" = 'OVERDUE'
                 AND s."status" IN ('PENDING', 'OVERDUE', 'PARTIAL')
-                AND s."dueDate" < CURRENT_DATE
+                AND s."dueDate" < $1::date
             ) sub
             GROUP BY sub."loanAccountId"
           ) aged`,
+          manilaToday,
         ),
 
         prisma.capitalTransaction.findFirst({

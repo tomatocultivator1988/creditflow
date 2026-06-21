@@ -87,7 +87,7 @@ export async function POST(request: Request) {
       const currentBalance = lockedRows.length > 0 ? new Decimal(lockedRows[0].balanceAfter) : new Decimal(0);
       const newBalance = currentBalance.minus(amount);
 
-      if (currentBalance.gt(0) && newBalance.lt(0)) {
+      if (newBalance.lt(0)) {
         throw new Error("INSUFFICIENT_CAPITAL");
       }
       const created = await tx.expense.create({

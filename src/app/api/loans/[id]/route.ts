@@ -87,22 +87,6 @@ export async function DELETE(request: Request, context: RouteContext) {
     const { id } = await context.params;
 
     await prisma.$transaction(async (tx) => {
-      const paymentIdList = (await tx.payment.findMany({
-        where: { loanAccountId: id },
-        select: { id: true },
-      })).map((p) => p.id);
-
-      await tx.capitalTransaction.deleteMany({
-        where: {
-          OR: [
-            { referenceId: id, referenceType: "LOAN" },
-            ...(paymentIdList.length > 0
-              ? [{ referenceId: { in: paymentIdList }, referenceType: "PAYMENT" }]
-              : []),
-          ],
-        },
-      });
-
       await tx.activityLog.deleteMany({ where: { accountId: id } });
       await tx.payment.deleteMany({ where: { loanAccountId: id } });
       await tx.loanSchedule.deleteMany({ where: { loanAccountId: id } });

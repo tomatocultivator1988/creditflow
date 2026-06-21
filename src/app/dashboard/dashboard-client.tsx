@@ -324,7 +324,7 @@ export function DashboardClient() {
               <span className="text-xs text-red-600">View →</span>
             </Link>
           ) : null}
-          {metrics.aging.days31to60 > 0 ? (
+          {(metrics.aging.days31to60 + metrics.aging.days61to90 + metrics.aging.days90plus) > 0 ? (
             <Link href="/loans?status=OVERDUE" className="flex items-center justify-between rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 hover:bg-rose-100 transition-colors">
               <span className="text-sm font-bold text-rose-800">{metrics.aging.days31to60 + metrics.aging.days61to90 + metrics.aging.days90plus} overdue 31d+</span>
               <span className="text-xs text-rose-600">View →</span>
