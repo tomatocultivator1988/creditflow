@@ -49,6 +49,7 @@ export async function GET(request: Request) {
 
     const totals = await prisma.expense.groupBy({
       by: ["type"],
+      where,
       _sum: { amount: true },
     });
 

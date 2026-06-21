@@ -35,7 +35,7 @@ export function serializeLoanAccount(account: LoanAccountShape) {
     nextDueDate: account.nextDueDate ? dateToManilaDateOnly(account.nextDueDate) : null,
     remarks: account.remarks ?? null,
     released: account.released,
-    releasedAt: account.releasedAt?.toISOString() ?? null,
+    releasedAt: account.releasedAt ? dateToManilaDateOnly(account.releasedAt) : null,
     releasedBy: account.releasedBy ?? null,
     createdAt: account.createdAt.toISOString(),
     updatedAt: account.updatedAt.toISOString(),

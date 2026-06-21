@@ -55,7 +55,7 @@ export async function withRetry<T>(
     } catch (error) {
       if (
         error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === "P2034" &&
+        (error.code === "P2034" || error.code === "P40P1") &&
         attempt < maxRetries
       ) {
         continue;

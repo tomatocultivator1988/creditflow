@@ -25,9 +25,8 @@ export async function GET(_request: Request, context: RouteContext) {
       throw new NotFoundError("Loan account not found");
     }
 
-    await updateOverdueSchedule(id);
-
     const updated = await prisma.$transaction(async (tx) => {
+      await updateOverdueSchedule(id);
       await recalculateBalance(tx as unknown as Parameters<typeof recalculateBalance>[0], id);
       return tx.loanAccount.findUnique({ where: { id } });
     });

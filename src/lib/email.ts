@@ -26,9 +26,18 @@ interface ReceiptEmailData {
   collector: string | null;
 }
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 function buildReceiptHtml(data: ReceiptEmailData): string {
   const receiptNo = data.paymentId.slice(0, 8).toUpperCase();
-  const isFullyPaid = new Intl.NumberFormat("en-PH").format(Number(data.remainingBalance)) === "0.00";
+  const isFullyPaid = Number(data.remainingBalance) === 0;
 
   return `
 <!DOCTYPE html>
@@ -55,7 +64,7 @@ function buildReceiptHtml(data: ReceiptEmailData): string {
 
     <div style="margin-top: 16px; border-top: 1px solid #fecaca; padding-top: 16px;">
       <p style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: #991b1b; margin: 0 0 8px;">Customer</p>
-      <p style="font-weight: 500; color: #1e293b; margin: 0;">${data.customerName}</p>
+      <p style="font-weight: 500; color: #1e293b; margin: 0;">${escapeHtml(data.customerName)}</p>
     </div>
 
     <div style="margin-top: 16px; border-top: 1px solid #fecaca; padding-top: 16px;">
@@ -94,12 +103,12 @@ function buildReceiptHtml(data: ReceiptEmailData): string {
     ${data.notes ? `
     <div style="margin-top: 16px; border-top: 1px solid #fecaca; padding-top: 12px;">
       <p style="font-size: 11px; font-weight: 600; text-transform: uppercase; color: #991b1b; margin: 0 0 6px;">Notes</p>
-      <p style="font-size: 12px; color: #475569; margin: 0;">${data.notes}</p>
+      <p style="font-size: 12px; color: #475569; margin: 0;">${escapeHtml(data.notes!)}</p>
     </div>` : ""}
 
     <div style="margin-top: 24px; border-top: 1px solid #fecaca; padding-top: 16px; text-align: center;">
       <p style="font-size: 12px; color: #64748b; margin: 0;">Thank you for your payment!</p>
-      ${data.collector ? `<p style="font-size: 11px; color: #94a3b8; margin: 4px 0 0;">Collected by: ${data.collector}</p>` : ""}
+      ${data.collector ? `<p style="font-size: 11px; color: #94a3b8; margin: 4px 0 0;">Collected by: ${escapeHtml(data.collector)}</p>` : ""}
     </div>
   </div>
 </body>

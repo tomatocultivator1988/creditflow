@@ -26,6 +26,7 @@ export function parsePositiveMoney(value: unknown, field = "amount"): Decimal {
 }
 
 export function decimalToString(value: MoneyInput): string {
+  if (value === null || value === undefined) return "0.00";
   return new Decimal(value.toString()).toFixed(2);
 }
 
