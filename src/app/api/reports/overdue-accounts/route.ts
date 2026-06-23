@@ -46,7 +46,7 @@ export async function GET(request: Request) {
         const daysOverdue = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
 
         const lastPayment = await prisma.payment.findFirst({
-          where: { loanAccountId: a.id },
+          where: { loanAccountId: a.id, voided: false },
           orderBy: { paymentDate: "desc" },
           select: { paymentDate: true, amount: true },
         });

@@ -24,7 +24,7 @@ export async function GET(_request: Request, context: RouteContext) {
       where: { id },
       include: {
         schedule: { orderBy: { periodNumber: "asc" } },
-        payments: { orderBy: { paymentDate: "asc" } },
+        payments: { where: { voided: false }, orderBy: { paymentDate: "asc" } },
       },
     });
 

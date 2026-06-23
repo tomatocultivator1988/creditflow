@@ -52,6 +52,9 @@ export type PaymentDto = {
   paymentDate: string;
   notes: string | null;
   postedBy: string | null;
+  voided: boolean;
+  voidedAt: string | null;
+  voidReason: string | null;
   createdAt: string;
 };
 

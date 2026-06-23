@@ -30,7 +30,7 @@ export async function GET(request: Request) {
 
     const payments = await prisma.payment.findMany({
       where: {
-        paymentDate: { gte: start, lt: end },
+        paymentDate: { gte: start, lt: end }, voided: false,
       },
       orderBy: { paymentDate: "desc" },
     });

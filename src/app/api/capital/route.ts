@@ -1,4 +1,5 @@
 import Decimal from "decimal.js";
+import bcrypt from "bcryptjs";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { handleApiError, readJson } from "@/lib/api";
@@ -62,6 +63,15 @@ export async function POST(request: Request) {
     const action = body._action as string;
 
     if (action === "add") {
+      const password = body.password as string | undefined;
+      if (!password) {
+        return NextResponse.json({ error: "Password is required for cash operations" }, { status: 401 });
+      }
+      const user = await prisma.user.findUnique({ where: { id: session.user!.id! } });
+      if (!user || !(await bcrypt.compare(password, user.password))) {
+        return NextResponse.json({ error: "Invalid password" }, { status: 401 });
+      }
+
       const parsed = addCapitalSchema.parse(body);
       const amount = parsePositiveMoney(parsed.amount, "amount");
 
@@ -93,6 +103,15 @@ export async function POST(request: Request) {
     }
 
     if (action === "withdraw") {
+      const password = body.password as string | undefined;
+      if (!password) {
+        return NextResponse.json({ error: "Password is required for cash operations" }, { status: 401 });
+      }
+      const user = await prisma.user.findUnique({ where: { id: session.user!.id! } });
+      if (!user || !(await bcrypt.compare(password, user.password))) {
+        return NextResponse.json({ error: "Invalid password" }, { status: 401 });
+      }
+
       const parsed = withdrawCapitalSchema.parse(body);
       const amount = parsePositiveMoney(parsed.amount, "amount");
 

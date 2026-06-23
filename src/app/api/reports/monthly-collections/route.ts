@@ -28,7 +28,7 @@ export async function GET(request: Request) {
         COALESCE(SUM("amount"), 0)::text AS "total",
         COUNT(*)::int AS "count"
       FROM "Payment"
-      WHERE EXTRACT(YEAR FROM "paymentDate") = $1::int
+      WHERE EXTRACT(YEAR FROM "paymentDate") = $1::int AND "voided" = false
       GROUP BY "month"
       ORDER BY "month"`,
       year,
@@ -48,3 +48,4 @@ export async function GET(request: Request) {
     return handleApiError(error);
   }
 }
+

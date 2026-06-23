@@ -67,6 +67,9 @@ export function serializePayment(payment: PaymentShape) {
     paymentDate: dateToManilaDateOnly(payment.paymentDate),
     notes: payment.notes,
     postedBy: payment.postedBy,
+    voided: payment.voided,
+    voidedAt: payment.voidedAt?.toISOString() ?? null,
+    voidReason: payment.voidReason ?? null,
     createdAt: payment.createdAt.toISOString(),
   };
 }

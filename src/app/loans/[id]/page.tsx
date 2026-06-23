@@ -4,7 +4,7 @@ import { FormEvent, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Camera, CheckCircle2, ChevronDown, ChevronUp, Clock, FileText, Pencil, Trash2, Upload, X, XCircle } from "lucide-react";
+import { Ban, Camera, CheckCircle2, ChevronDown, ChevronUp, Clock, FileText, Pencil, Trash2, Upload, X, XCircle } from "lucide-react";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { ErrorMessage, LoadingBlock } from "@/components/ui-state";
 import { PageHeader } from "@/components/page-header";
@@ -32,6 +32,13 @@ export default function LoanDetailPage() {
   const [scheduleOpen, setScheduleOpen] = useState(true);
   const [historyOpen, setHistoryOpen] = useState(true);
   const [previewImg, setPreviewImg] = useState<string | null>(null);
+
+  // Void payment
+  const [voidModal, setVoidModal] = useState(false);
+  const [voidPaymentId, setVoidPaymentId] = useState<string | null>(null);
+  const [voidReason, setVoidReason] = useState("");
+  const [voidConfirm, setVoidConfirm] = useState("");
+  const [voiding, setVoiding] = useState(false);
 
   // Edit form
   const [editName, setEditName] = useState("");
@@ -195,6 +202,34 @@ export default function LoanDetailPage() {
       setConfirmDelete(false);
     }
   }
+
+  // Void payment handler
+  async function handleVoidPayment() {
+    if (!voidPaymentId || voidConfirm !== "VOID") return;
+    setVoiding(true);
+    try {
+      await apiRequest(`/api/payments/${voidPaymentId}/void`, {
+        method: "POST",
+        body: JSON.stringify({ reason: voidReason }),
+      });
+      setVoidModal(false);
+      setVoidPaymentId(null);
+      setVoidConfirm("");
+      fetchData();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setVoiding(false);
+    }
+  }
+
+  const latestNonVoidedPaymentId = payments
+    .filter((p) => !p.voided)
+    .sort((a, b) => {
+      const dc = new Date(b.paymentDate).getTime() - new Date(a.paymentDate).getTime();
+      if (dc !== 0) return dc;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    })[0]?.id;
 
   if (error) return <ErrorMessage message={error} />;
   if (!loan) return <LoadingBlock />;
@@ -438,20 +473,34 @@ export default function LoanDetailPage() {
                 <tr>
                   <th className="px-4 py-3 font-medium text-slate-600">Date</th>
                   <th className="px-4 py-3 font-medium text-slate-600">Amount</th>
-                  <th className="hidden sm:table-cell px-4 py-3 font-medium text-slate-600">Notes</th>
+                         <th className="hidden sm:table-cell px-4 py-3 font-medium text-slate-600">Notes</th>
+                          <th className="px-4 py-3 font-medium text-slate-600 w-16"></th>
                 </tr>
               </thead>
               <tbody>
                 {payments.length === 0 ? (
                   <tr>
-                    <td colSpan={3} className="px-4 py-8 text-center text-slate-400">No payments yet</td>
+                     <td colSpan={4} className="px-4 py-8 text-center text-slate-400">No payments yet</td>
                   </tr>
                 ) : (
                   payments.map((p) => (
                     <tr key={p.id} className="border-b border-slate-100 hover:bg-slate-50">
                       <td className="px-4 py-3">{p.paymentDate}</td>
                       <td className="px-4 py-3 font-medium text-emerald-600">{formatPeso(p.amount)}</td>
-                      <td className="hidden sm:table-cell px-4 py-3 text-slate-500">{p.notes || "—"}</td>
+                       <td className="hidden sm:table-cell px-4 py-3 text-slate-500">{p.notes || "—"}</td>
+                         <td className="px-4 py-3">
+                           {p.voided ? (
+                             <span className="inline-flex items-center rounded-lg border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700">VOIDED</span>
+                           ) : !loan || loan.status === "FULLY_PAID" ? null : p.id === latestNonVoidedPaymentId ? (
+                             <button
+                               type="button"
+                               onClick={() => { setVoidPaymentId(p.id); setVoidReason(""); setVoidConfirm(""); setVoidModal(true); }}
+                               className="inline-flex h-7 items-center gap-1 rounded-lg border border-rose-200 bg-white px-2 text-[10px] font-medium text-rose-600 hover:bg-rose-50 active:scale-[0.98]"
+                             >
+                               <Ban size={12} /> Void
+                             </button>
+                           ) : null}
+                         </td>
                     </tr>
                   ))
                 )}
@@ -586,6 +635,52 @@ export default function LoanDetailPage() {
             <button onClick={() => setPreviewImg(null)} className="absolute -top-3 -right-3 flex size-8 items-center justify-center rounded-full bg-white shadow-lg text-slate-600 hover:text-slate-900">
               <X size={18} />
             </button>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Void Payment Modal */}
+      {voidModal ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4" onClick={() => setVoidModal(false)}>
+          <div className="w-full max-w-sm rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+              <h2 className="text-base font-bold text-slate-900">Void Payment</h2>
+              <button onClick={() => setVoidModal(false)} className="flex size-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600"><X size={18} /></button>
+            </div>
+            <div className="space-y-4 px-6 py-4">
+              <div className="rounded-lg border border-rose-200 bg-rose-50 p-3">
+                <p className="text-sm text-rose-800">This will reverse the payment and restore the schedule. This cannot be undone.</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Type VOID to confirm</label>
+                <input
+                  value={voidConfirm}
+                  onChange={(e) => setVoidConfirm(e.target.value)}
+                  placeholder="VOID"
+                  className="h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">Reason</label>
+                <textarea
+                  value={voidReason}
+                  onChange={(e) => setVoidReason(e.target.value)}
+                  placeholder="Why is this being voided?"
+                  className="min-h-[60px] w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100"
+                />
+              </div>
+              <div className="flex items-center justify-end gap-3 border-t border-slate-200 pt-4">
+                <button type="button" onClick={() => setVoidModal(false)} className="h-10 rounded-xl border border-slate-300 px-4 text-sm font-medium text-slate-700 hover:bg-slate-50">Cancel</button>
+                <button
+                  type="button"
+                  onClick={handleVoidPayment}
+                  disabled={voiding || voidConfirm !== "VOID"}
+                  className="h-10 rounded-xl bg-rose-700 px-5 text-sm font-medium text-white hover:bg-rose-800 disabled:bg-slate-300 disabled:cursor-not-allowed active:scale-[0.98]"
+                >
+                  {voiding ? "Voiding..." : "Void Payment"}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       ) : null}

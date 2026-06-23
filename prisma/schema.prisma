@@ -107,6 +107,9 @@ model Payment {
   orNumber      String?
   notes         String?
   postedBy      String?
+  voided        Boolean     @default(false)
+  voidedAt      DateTime?
+  voidReason    String?
   createdAt     DateTime    @default(now())
   loanAccount   LoanAccount @relation(fields: [loanAccountId], references: [id])
   postedByUser  User?       @relation(fields: [postedBy], references: [id])
@@ -114,6 +117,8 @@ model Payment {
 
   @@index([loanAccountId])
   @@index([paymentDate])
+  @@index([loanAccountId, voided])
+  @@index([voided, paymentDate])
 }
 
 model AdminConfig {

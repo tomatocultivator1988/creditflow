@@ -42,6 +42,7 @@ export default function CapitalPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [addAmount, setAddAmount] = useState("");
   const [addDesc, setAddDesc] = useState("");
+  const [addPassword, setAddPassword] = useState("");
   const [addError, setAddError] = useState("");
   const [addLoading, setAddLoading] = useState(false);
 
@@ -49,6 +50,7 @@ export default function CapitalPage() {
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [withdrawDesc, setWithdrawDesc] = useState("");
+  const [withdrawPassword, setWithdrawPassword] = useState("");
   const [withdrawError, setWithdrawError] = useState("");
   const [withdrawLoading, setWithdrawLoading] = useState(false);
 
@@ -65,14 +67,14 @@ export default function CapitalPage() {
     fetchData();
   }, [page, typeFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function openAddModal() { setAddOpen(true); setAddAmount(""); setAddDesc(""); setAddError(""); }
-  function openWithdrawModal() { setWithdrawOpen(true); setWithdrawAmount(""); setWithdrawDesc(""); setWithdrawError(""); }
+  function openAddModal() { setAddOpen(true); setAddAmount(""); setAddDesc(""); setAddPassword(""); setAddError(""); }
+  function openWithdrawModal() { setWithdrawOpen(true); setWithdrawAmount(""); setWithdrawDesc(""); setWithdrawPassword(""); setWithdrawError(""); }
 
   async function handleAddSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setAddError(""); setAddLoading(true);
     try {
-      await apiRequest("/api/capital", { method: "POST", body: JSON.stringify({ _action: "add", amount: addAmount, description: addDesc || undefined }) });
+      await apiRequest("/api/capital", { method: "POST", body: JSON.stringify({ _action: "add", amount: addAmount, description: addDesc || undefined, password: addPassword }) });
       setAddOpen(false);
       setPage(1);
       fetchData();
@@ -84,7 +86,7 @@ export default function CapitalPage() {
     e.preventDefault();
     setWithdrawError(""); setWithdrawLoading(true);
     try {
-      await apiRequest("/api/capital", { method: "POST", body: JSON.stringify({ _action: "withdraw", amount: withdrawAmount, description: withdrawDesc || undefined }) });
+      await apiRequest("/api/capital", { method: "POST", body: JSON.stringify({ _action: "withdraw", amount: withdrawAmount, description: withdrawDesc || undefined, password: withdrawPassword }) });
       setWithdrawOpen(false);
       setPage(1);
       fetchData();
@@ -192,6 +194,10 @@ export default function CapitalPage() {
                 <label className="block text-sm font-medium text-slate-700">Description</label>
                 <input value={addDesc} onChange={(e) => setAddDesc(e.target.value)} placeholder="e.g. Additional investment" className="mt-1.5 h-10 w-full rounded-xl border border-slate-300 px-3 text-sm outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100" />
               </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700">Admin Password *</label>
+                <input required type="password" value={addPassword} onChange={(e) => setAddPassword(e.target.value)} placeholder="Enter your password to confirm" className="mt-1.5 h-10 w-full rounded-xl border border-slate-300 px-3 text-sm outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100" />
+              </div>
             </form>
             <div className="flex-shrink-0 flex flex-col-reverse sm:flex-row items-center justify-end gap-3 border-t border-slate-200 px-6 py-4">
               <button type="button" onClick={() => setAddOpen(false)} className="min-h-[44px] sm:min-h-0 w-full sm:w-auto inline-flex h-10 items-center justify-center rounded-xl border border-slate-300 px-6 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 active:scale-[0.98]">Cancel</button>
@@ -221,6 +227,10 @@ export default function CapitalPage() {
               <div>
                 <label className="block text-sm font-medium text-slate-700">Purpose / Description</label>
                 <input value={withdrawDesc} onChange={(e) => setWithdrawDesc(e.target.value)} placeholder="e.g. Owner's draw" className="mt-1.5 h-10 w-full rounded-xl border border-slate-300 px-3 text-sm outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700">Admin Password *</label>
+                <input required type="password" value={withdrawPassword} onChange={(e) => setWithdrawPassword(e.target.value)} placeholder="Enter your password to confirm" className="mt-1.5 h-10 w-full rounded-xl border border-slate-300 px-3 text-sm outline-none focus:border-red-500 focus:ring-2 focus:ring-red-100" />
               </div>
             </form>
             <div className="flex-shrink-0 flex flex-col-reverse sm:flex-row items-center justify-end gap-3 border-t border-slate-200 px-6 py-4">

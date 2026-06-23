@@ -53,7 +53,7 @@ export async function GET() {
             COALESCE(SUM(CASE WHEN "paymentDate" >= $1::timestamp AND "paymentDate" < $2::timestamp THEN "amount" ELSE 0 END), 0)::text AS "today",
             COALESCE(SUM(CASE WHEN "paymentDate" >= $3::timestamp AND "paymentDate" < $4::timestamp THEN "amount" ELSE 0 END), 0)::text AS "week",
             COALESCE(SUM(CASE WHEN "paymentDate" >= $5::timestamp AND "paymentDate" < $6::timestamp THEN "amount" ELSE 0 END), 0)::text AS "month"
-          FROM "Payment"`,
+          FROM "Payment" WHERE "voided" = false WHERE "voided" = false`,
           todayStart,
           todayEnd,
           weekStart,
@@ -237,3 +237,4 @@ export async function GET() {
     return handleApiError(error);
   }
 }
+

@@ -25,11 +25,12 @@ export async function GET(request: Request) {
 
     const [payments, total] = await Promise.all([
       prisma.payment.findMany({
+        where: { voided: false },
         orderBy: { paymentDate: "desc" },
         skip: (page - 1) * limit,
         take: limit,
       }),
-      prisma.payment.count(),
+      prisma.payment.count({ where: { voided: false } }),
     ]);
 
     return NextResponse.json({
